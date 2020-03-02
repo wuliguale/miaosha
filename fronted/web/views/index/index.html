@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>后台首页</title>
+</head>
+<body>
+
+{{if .isLogin}}
+    <a href="{{.urlLogout}}">退出</a>
+ {{else}}
+    <a href="{{.urlLogin}}">登录</a>
+{{end}}
+
+{{range $v := .data}}
+    <div>
+        <p><a href="{{$v.url}}">{{$v.desc}}</a></p>
+    </div>
+{{end}}
+
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>商品列表</title>
+</head>
+<body>
+<div>
+    <a href="{{.urlAdd}}"><button>添加商品</button></a>
+</div>
+<div class="table-responsive noSwipe">
+    <table class="table table-striped table-hover">
+        <thead>
+        <tr>
+            <th>id</th>
+            <th>name</th>
+            <th>image</th>
+            <th>url</th>
+            <th>edit</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{range $i, $v := .productList}}
+            <tr>
+                <td>{{$v.Id}}</td>
+                <td>{{$v.ProductName}}</td>
+                <td>{{$v.Image}}</td>
+                <td><a target="_blank" href="{{$v.UrlDetail}}">{{$v.Url}}</a></td>
+                <td><a href="{{$v.UrlEdit}}">编辑</a></td>
+                <td><a href="{{$v.UrlDelete}}">删除</a></td>
+            </tr>
+        {{end}}
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>
