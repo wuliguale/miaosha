@@ -8,6 +8,7 @@ import (
 type IOrderService interface {
 	GetOrderByID(uint64) (*datamodels.Order, error)
 	InsertOrder(*datamodels.Order) error
+	InsertIgnoreOrder(*datamodels.Order) error
 	UpdateOrder(*datamodels.Order) error
 	DeleteOrder(*datamodels.Order) error
 }
@@ -26,6 +27,10 @@ func (o *OrderService) GetOrderByID(oid uint64) (order *datamodels.Order, err er
 
 func (o *OrderService) InsertOrder(order *datamodels.Order) error {
 	return o.OrderRepository.Insert(order)
+}
+
+func (o *OrderService) InsertIgnoreOrder(order *datamodels.Order) error {
+	return o.OrderRepository.InsertIgnore(order)
 }
 
 func (o *OrderService) UpdateOrder(order *datamodels.Order) error {

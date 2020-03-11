@@ -7,6 +7,7 @@ import (
 
 type IOrder interface {
 	Insert(*datamodels.Order) error
+	InsertIgnore(*datamodels.Order) error
 	Delete(*datamodels.Order) error
 	Update(*datamodels.Order) error
 	SelectByPk(uint64) (*datamodels.Order, error)
@@ -29,6 +30,12 @@ func (o *OrderRepository) SelectByPk(oid uint64) (order *datamodels.Order, err e
 
 func (o *OrderRepository) Insert(order *datamodels.Order) error {
 	return o.mysqlConn.Create(order).Error
+}
+
+
+func (o *OrderRepository) InsertIgnore(order *datamodels.Order) error {
+	tableName := order.TableName()
+	return o.mysqlConn.Exec("INSERT IGNORE INTO " + tableName + " (pid,uid,state,create_at) VALUES (?,?,?,?)", order.Pid, order.Uid, order.State, order.CreateAt).Error
 }
 
 
