@@ -4,10 +4,18 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"strconv"
 	"time"
 )
+
+
+func FailOnError(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+	}
+}
 
 //struct -> map
 func Struct2Map(obj interface{}) (data map[string]interface{}){

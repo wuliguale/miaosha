@@ -1,13 +1,25 @@
 package controllers
 
 import (
+	"github.com/garyburd/redigo/redis"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
+	"github.com/streadway/amqp"
+	"miaosha-demo/common"
 )
 
 
 const RETURN_SUCCESS  = 0
 const RETURN_FAIL  = 1
+
+//controller包内初始化redis连接池
+var RedisPool *redis.Pool
+//初始化rabbitmq连接
+var RabbitMqConn *amqp.Connection
+func init() {
+	RedisPool = common.NewRedisPool()
+	RabbitMqConn, _ = common.NewRabbitMqConn()
+}
 
 
 //显示错误
