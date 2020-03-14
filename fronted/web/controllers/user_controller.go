@@ -1,10 +1,11 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
-	"miaosha-demo/datamodels"
 	"miaosha-demo/fronted/middleware"
+	userRpc "miaosha-demo/rpc"
 	"miaosha-demo/services"
 	"time"
 )
@@ -37,12 +38,7 @@ func (u *UserController) PostRegister() mvc.View {
 	nickName := u.Ctx.FormValue("nickname")
 	password := u.Ctx.FormValue("password")
 
-	user := &datamodels.User{
-		UserName: userName,
-		NickName: nickName,
-		Password: password,
-	}
-	err := u.UserService.InsertUser(user)
+	_, err := userRpc.RpcUserServiceReg(userName, nickName, password)
 	if err != nil {
 		return errorReturnView(u.Ctx, err.Error(), "/", 500)
 	}
@@ -65,8 +61,9 @@ func (u *UserController) PostLogin() mvc.View {
 	userName := u.Ctx.FormValue("username")
 	password := u.Ctx.FormValue("password")
 
-	user, isOk := u.UserService.IsPwdSuccess(userName, password)
-	if !isOk {
+	user, err := userRpc.RpcUserServiceLogin(userName, password)
+	fmt.Println(user, err)
+	if err != nil {
 		return messageThenRedirect("密码错误", "/user/login")
 	}
 
@@ -75,6 +72,7 @@ func (u *UserController) PostLogin() mvc.View {
 
 	return messageThenRedirect("登录成功", "/")
 }
+
 
 //退出登录
 func (u *UserController) GetLogout() {

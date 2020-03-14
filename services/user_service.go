@@ -7,6 +7,7 @@ import (
 	"miaosha-demo/common"
 	"miaosha-demo/datamodels"
 	"miaosha-demo/repositories"
+	"miaosha-demo/rpc/gen-go/user"
 	"net/url"
 	"strconv"
 	"strings"
@@ -16,6 +17,7 @@ import (
 type IUserService interface {
 	IsPwdSuccess(userName string, pwd string) (user *datamodels.User, isOk bool)
 	InsertUser(user *datamodels.User) error
+	GetUserByName(string) (*datamodels.User, error)
 }
 
 type UserService struct {
@@ -51,6 +53,11 @@ func (u *UserService) InsertUser(user *datamodels.User) error {
 	return u.UserRepository.Insert(user)
 }
 
+func (u *UserService) GetUserByName(userName string) (*datamodels.User, error) {
+	return u.UserRepository.SelectByName(userName)
+}
+
+
 func GeneratePassword(userPassword string) ([]byte, error) {
 	return bcrypt.GenerateFromPassword([]byte(userPassword), bcrypt.DefaultCost)
 }
@@ -64,8 +71,8 @@ func ValidatePassword(userPassword string, hashed string) (isOK bool, err error)
 
 
 //设置用户登录cookie
-func SetLoginCookie(ctx iris.Context, user *datamodels.User, duration time.Duration) {
-	uid := strconv.Itoa(int(user.Id))
+func SetLoginCookie(ctx iris.Context, user *user.UserStruct, duration time.Duration) {
+	uid := strconv.Itoa(int(user.ID))
 	expireAt := strconv.Itoa(int(duration.Seconds()) + int(time.Now().Unix()))
 	sign := MakeCookieSignMd5(uid, expireAt)
 
