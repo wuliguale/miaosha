@@ -14,6 +14,7 @@
             <th>num</th>
             <th>image</th>
             <th>url</th>
+            <th>秒杀</th>
         </tr>
         </thead>
         <tbody>
@@ -24,6 +25,7 @@
                 <td>{{$v.Num}}</td>
                 <td>{{$v.Image}}</td>
                 <td><a target="_blank" href="{{$v.UrlDetail}}">{{$v.Url}}</a></td>
+                <td><a target="_blank" href="{{$v.UrlOrder}}">秒杀{{$v.Id}}</a></td>
             </tr>
         {{end}}
         </tbody>

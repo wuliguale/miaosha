@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/garyburd/redigo/redis"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
@@ -32,8 +33,26 @@ func (p *ProductController) GetAll() mvc.View{
 
 	productListMap := common.StructPtrArray2MapArray(productList)
 
+	uid, err := services.GetUidFromCookie(p.Ctx)
+	if err != nil {
+		return errorReturnView(p.Ctx, err.Error(), "/", 500)
+	}
+	uidStr := fmt.Sprintf("%v", uid)
+
 	for k,v := range productListMap {
-		v["UrlDetail"] = "/product/one?id=" + fmt.Sprintf("%v", v["Id"])
+		pidStr := fmt.Sprintf("%v", v["Id"])
+
+		jwtClaims := jwt.MapClaims{"uid" : uidStr, "pid" : pidStr, "nbf" : 1584273600}
+
+		jwtStr, err := common.JwtSign(jwtClaims)
+		if err != nil {
+			return errorReturnView(p.Ctx, err.Error(), "/", 500)
+		}
+
+		v["UrlDetail"] = "/product/one?id=" + pidStr
+
+		//秒杀接口使用单独的域名，不和商品页面使用同一个域名
+		v["UrlOrder"] = "http://192.168.125.128:8000/product/order?jwt=" + jwtStr
 		productListMap[k] = v
 	}
 
@@ -68,19 +87,10 @@ func (p *ProductController) GetOne() mvc.View{
 }
 
 
-
-func (p *ProductController) GetOrderInit() {
-	pid := p.Ctx.URLParamInt64Default("pid", 0)
-	if pid > 0 {
-		//从连接池获取连接
-		redisConn := RedisPool.Get()
-		defer redisConn.Close()
-	}
-}
-
-
-//秒杀接口
+//秒杀接口，从kong负载均衡过来
 func (p *ProductController) GetOrder() {
+	ReturnJsonFail(p.Ctx, "参数错误")
+	return
 	pid := p.Ctx.URLParamInt64Default("pid", 0)
 	uid, err := services.GetUidFromCookie(p.Ctx)
 	if pid == 0 || uid == 0 || err != nil {
