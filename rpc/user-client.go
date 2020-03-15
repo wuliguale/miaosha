@@ -33,6 +33,7 @@ func GetRpcUserServiceClient() (*user.UserServiceClient, thrift.TTransport){
 
 	transportFactory := thrift.NewTTransportFactory()
 
+	//TSocket实现了TTransport接口
 	socket, err := thrift.NewTSocket(addr)
 	if err != nil {
 		fmt.Println("Error opening socket:", err)
@@ -47,6 +48,7 @@ func GetRpcUserServiceClient() (*user.UserServiceClient, thrift.TTransport){
 		fmt.Println(err)
 	}
 
+	//client拥有iprot+oprot，protocol拥有transport
 	return user.NewUserServiceClientFactory(transport, protocolFactory), transport
 }
 
