@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	"log"
 	"miaosha-demo/common"
 	"miaosha-demo/datamodels"
 	"miaosha-demo/repositories"
@@ -15,15 +17,30 @@ import (
 //rpc UserService的服务端
 type UserServiceHandler struct {
 	UserService services.IUserService
+	ConsulClient *common.ConsulClient
 }
 
-func NewUserServiceHandler() *UserServiceHandler {
+func NewUserServiceHandler() (userServiceHandler *UserServiceHandler, err error) {
 	db, err := common.NewMysqlConn()
-	fmt.Println(err)
+	if err != nil {
+		log.Fatalln("prc user new  handler fail", err)
+	}
 
 	userService := services.NewUserService(repositories.NewUserRepository(db))
-	return &UserServiceHandler{userService}
+
+	consulConfig, err := common.NewConfigConsul()
+	if err != nil {
+		log.Fatalln("new config consul fail: ", err)
+	}
+
+	consulClient, err := common.NewConsulClient(consulConfig, nil)
+	if err != nil {
+		log.Fatalln("new consul client fail: ", err)
+	}
+
+	return &UserServiceHandler{userService, consulClient}, nil
 }
+
 
 func (h *UserServiceHandler) Reg(ctx context.Context, userName, nickName, password string) (*user.UserStruct, error) {
 	modelUser := &datamodels.User{
@@ -45,7 +62,6 @@ func (h *UserServiceHandler) Reg(ctx context.Context, userName, nickName, passwo
 	userSt := h.ModelUser2StructUset(modelUser)
 	return userSt, nil
 }
-
 
 
 func (h *UserServiceHandler) Login(ctx context.Context, userName , password string) (*user.UserStruct, error) {
@@ -70,9 +86,25 @@ func (h *UserServiceHandler) ModelUser2StructUset(modelUser *datamodels.User) *u
 	}
 }
 
-
+//   ./rpc_user_server -ip 127.0.0.1 -port 9090
 func main() {
-	addr := "127.0.0.1:9090"
+	flagIp := flag.String("ip", "", "rpc server ip")
+	//指定监听端口
+	flagPort := flag.Int("port", 0, "rpc server port")
+	flag.Parse()
+
+	if len(*flagIp) == 0 {
+		log.Fatalln("flag ip error")
+	}
+	if *flagPort <= 0 {
+		log.Fatalln("flag port error")
+	}
+
+	//本机的指定端口
+	localIp := *flagIp
+	localPort := *flagPort
+	addr := fmt.Sprintf("127.0.0.1:%d", localPort)
+	log.Println("listen: ", addr)
 
 	//1. protocolFactory
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
@@ -82,19 +114,41 @@ func main() {
 
 	//3. socket
 	transport, err := thrift.NewTServerSocket(addr)
-	fmt.Println(err)
+	if err != nil {
+		log.Fatalln("rpc user new socket fail", err)
+	}
 
 	//4. xxxHandler
-	handler := NewUserServiceHandler()
+	handler, err := NewUserServiceHandler()
+	if err != nil {
+		log.Fatalln("new userServiceHandler fail: ", err)
+	}
 
 	//5. xxxProcessor
 	processor := user.NewUserServiceProcessor(handler)
 
 	//6. NewTSimpleServer4
 	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
-	fmt.Println("Starting the simple server... on ", addr)
 
-	//7. serve
+	//这里直接知道服务名
+	serviceConfig, err := handler.ConsulClient.Config.GetServiceConfigByName(handler.ConsulClient.Config.GetRpcUserServiceName())
+	if err != nil {
+		log.Fatalln("get service config fail: ", err)
+	}
+	log.Println("serviceConfig: ", serviceConfig)
+
+	err = handler.ConsulClient.RegisterServer(serviceConfig.Name, serviceConfig.Tags, localIp, localPort)
+	if err != nil {
+		log.Fatalln("rpc user register service fail ", err)
+	}
+
 	server.Serve()
 }
+
+
+
+
+
+
+
 
