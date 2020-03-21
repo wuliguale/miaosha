@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"reflect"
 	"strconv"
 	"time"
@@ -145,6 +146,26 @@ func TypeConversion(value string, ntype string) (reflect.Value, error) {
 func StringMd5(str string) string {
 	md5Arr := md5.Sum([]byte(str))
 	return fmt.Sprintf("%x", md5Arr[:])
+}
+
+
+
+func GetLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+
+	if err != nil {
+		return ""
+	}
+
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+
+	return ""
 }
 
 
