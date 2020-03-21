@@ -10,24 +10,25 @@ import (
 //rpc UserService的客户端
 var defaultCtx = context.Background()
 
-func RpcUserServiceReg(userName, nickName, password string) (*user.UserStruct, error) {
-	client, transport := GetRpcUserServiceClient()
+
+func RpcUserServiceReg(ip string, port int, userName, nickName, password string) (*user.UserStruct, error) {
+	client, transport := GetRpcUserServiceClient(ip, port)
 	defer transport.Close()
 
 	return client.Reg(defaultCtx, userName, nickName, password)
 }
 
 
-func RpcUserServiceLogin(userName, password string) (*user.UserStruct, error) {
-	client, transport := GetRpcUserServiceClient()
+func RpcUserServiceLogin(ip string, port int, userName, password string) (*user.UserStruct, error) {
+	client, transport := GetRpcUserServiceClient(ip, port)
 	defer transport.Close()
 
 	return client.Login(defaultCtx, userName, password)
 }
 
 
-func GetRpcUserServiceClient() (*user.UserServiceClient, thrift.TTransport){
-	addr := "127.0.0.1:9090"
+func GetRpcUserServiceClient(ip string, port int) (*user.UserServiceClient, thrift.TTransport){
+	addr := fmt.Sprintf("%s:%d", ip, port)
 
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 

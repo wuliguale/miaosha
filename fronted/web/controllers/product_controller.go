@@ -89,8 +89,6 @@ func (p *ProductController) GetOne() mvc.View{
 
 //秒杀接口，从kong负载均衡过来
 func (p *ProductController) GetOrder() {
-	ReturnJsonFail(p.Ctx, "参数错误")
-	return
 	pid := p.Ctx.URLParamInt64Default("pid", 0)
 	uid, err := services.GetUidFromCookie(p.Ctx)
 	if pid == 0 || uid == 0 || err != nil {

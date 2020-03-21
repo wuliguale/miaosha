@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
+	"miaosha-demo/common"
 	"miaosha-demo/fronted/middleware"
 	userRpc "miaosha-demo/rpc"
 	"miaosha-demo/services"
@@ -38,7 +39,8 @@ func (u *UserController) PostRegister() mvc.View {
 	nickName := u.Ctx.FormValue("nickname")
 	password := u.Ctx.FormValue("password")
 
-	_, err := userRpc.RpcUserServiceReg(userName, nickName, password)
+	serviceInfo, err := Consul.GetServiceByName(Consul.Config.GetRpcUserServiceName())
+	_, err = userRpc.RpcUserServiceReg(serviceInfo.Host, serviceInfo.Port, userName, nickName, password)
 	if err != nil {
 		return errorReturnView(u.Ctx, err.Error(), "/", 500)
 	}
@@ -56,13 +58,31 @@ func (u *UserController) GetLogin() mvc.View {
 	}
 }
 
+var Consul *common.ConsulClient
+func init() {
+	config, err := common.NewConfigConsul()
+	fmt.Println("new config,", err)
+
+	cache := common.NewFreeCacheClient(20)
+
+	Consul, err = common.NewConsulClient(config, cache)
+	fmt.Println("new consul", err)
+
+	//一直watch consul上的service
+	serviceNameList := Consul.Config.GetServiceNameList()
+	for _, serviceName := range serviceNameList {
+		go Consul.WatchServiceByName(serviceName)
+	}
+}
+
+
 //登录提交
 func (u *UserController) PostLogin() mvc.View {
 	userName := u.Ctx.FormValue("username")
 	password := u.Ctx.FormValue("password")
 
-	user, err := userRpc.RpcUserServiceLogin(userName, password)
-	fmt.Println(user, err)
+	serviceInfo, err := Consul.GetServiceByName(Consul.Config.GetRpcUserServiceName())
+	user, err := userRpc.RpcUserServiceLogin(serviceInfo.Host, serviceInfo.Port, userName, password)
 	if err != nil {
 		return messageThenRedirect("密码错误", "/user/login")
 	}

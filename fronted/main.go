@@ -15,9 +15,9 @@ func main() {
 	app := iris.New()
 	app.Logger().SetLevel("debug")
 
-	template := iris.HTML("./fronted/web/views", ".html").Reload(true)
+	template := iris.HTML("./web/views", ".html").Reload(true)
 	app.RegisterView(template)
-	app.HandleDir("/assets", "./backend/web/assets")
+	app.HandleDir("/assets", "./../backend/web/assets")
 
 	//错误处理，如404
 	app.OnAnyErrorCode(func(ctx iris.Context) {
