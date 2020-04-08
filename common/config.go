@@ -75,3 +75,8 @@ func (configConsul *ConfigConsul) GetRpcUserServiceName() string {
 	return "miaosha-demo-user"
 }
 
+
+func (configConsul *ConfigConsul) GetRedisServiceName() string {
+	return "miaosha-demo-redis"
+}
+

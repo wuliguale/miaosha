@@ -10,6 +10,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fatih/structs v1.1.0
 	github.com/garyburd/redigo v1.6.0
+	github.com/go-redis/redis/v7 v7.2.0 // indirect
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/jinzhu/gorm v1.9.12
 	github.com/kataras/iris/v12 v12.1.8

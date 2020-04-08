@@ -1,16 +1,24 @@
 package common
 
 import (
-	"github.com/garyburd/redigo/redis"
+	"github.com/go-redis/redis/v7"
+	"strconv"
 )
 
-func NewRedisPool() *redis.Pool {
-	return &redis.Pool{
-		MaxIdle:10,
-		MaxActive:10,
-		Dial: func() (redis.Conn, error) {
-			conn, err := redis.Dial("tcp", "192.168.125.128:6379")
-			return conn, err
-		},
+func NewRedisClusterClient(consul *ConsulClient) (*redis.ClusterClient, error) {
+	serviceName := consul.Config.GetRedisServiceName()
+	serviceInfoList, err := consul.GetServiceListByName(serviceName)
+	if err != nil {
+		return nil, err
 	}
+
+	var addrList []string
+	for _,serviceInfo := range serviceInfoList.List {
+		addrList = append(addrList, serviceInfo.Host + ":" + strconv.Itoa(serviceInfo.Port))
+	}
+
+	return redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs : addrList,
+		Password: "310900",
+	}), nil
 }

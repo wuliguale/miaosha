@@ -1,7 +1,8 @@
 package controllers
 
 import (
-	"github.com/garyburd/redigo/redis"
+	"fmt"
+	"github.com/go-redis/redis/v7"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
 	"github.com/streadway/amqp"
@@ -12,14 +13,33 @@ import (
 const RETURN_SUCCESS  = 0
 const RETURN_FAIL  = 1
 
-//controller包内初始化redis连接池
-var RedisPool *redis.Pool
+var Consul *common.ConsulClient
+//初始化redis连接
+var RedisClusterClient *redis.ClusterClient
 //初始化rabbitmq连接
 var RabbitMqConn *amqp.Connection
+
 func init() {
-	RedisPool = common.NewRedisPool()
 	RabbitMqConn, _ = common.NewRabbitMqConn()
+
+	config, err := common.NewConfigConsul()
+	fmt.Println("new config,", err)
+
+	cache := common.NewFreeCacheClient(20)
+
+	Consul, err = common.NewConsulClient(config, cache)
+	fmt.Println("new consul", err)
+
+	//一直watch consul上的service
+	serviceNameList := Consul.Config.GetServiceNameList()
+	for _, serviceName := range serviceNameList {
+		go Consul.WatchServiceByName(serviceName)
+	}
+
+	//取consul上redis service的配置
+	RedisClusterClient, err = common.NewRedisClusterClient(Consul)
 }
+
 
 
 //显示错误

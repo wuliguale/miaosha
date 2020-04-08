@@ -3,7 +3,7 @@ package controllers
 import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/garyburd/redigo/redis"
+	"github.com/go-redis/redis/v7"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
 	"github.com/kataras/iris/v12/sessions"
@@ -96,14 +96,10 @@ func (p *ProductController) GetOrder() {
 		return
 	}
 
-	//从连接池获取连接
-	redisConn := RedisPool.Get()
-	defer redisConn.Close()
-
 	//秒杀是否已结束
 	pidOverKey := "pid_over_" + strconv.Itoa(int(pid))
-	isOver, err := redis.Int(redisConn.Do("get", pidOverKey))
-	if err != nil  && err != redis.ErrNil{
+	isOver, err := RedisClusterClient.Get(pidOverKey).Int()
+	if err != nil  && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "检查秒杀是否结束出错" + err.Error())
 		return
 	}
@@ -114,8 +110,8 @@ func (p *ProductController) GetOrder() {
 
 	//是否重复购买
 	isRepeatKey := "pid_" + strconv.Itoa(int(pid))
-	isRepeat, err := redis.Int(redisConn.Do("getbit", isRepeatKey, uid))
-	if err != nil && err != redis.ErrNil{
+	isRepeat, err := RedisClusterClient.GetBit(isRepeatKey, uid).Result()
+	if err != nil && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "检查是否重复购买出错" + err.Error())
 		return
 	}
@@ -126,15 +122,15 @@ func (p *ProductController) GetOrder() {
 
 	//检查库存
 	numKey := "pid_num_" + strconv.Itoa(int(pid))
-	num, err := redis.Int(redisConn.Do("decr", numKey))
-	if err != nil && err != redis.ErrNil{
+	num, err := RedisClusterClient.Decr(numKey).Result()
+	if err != nil && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "redis检查库存错误" + err.Error())
 		return
 	}
-	//这里判断小于0，等于0时当前连接获得左后一个
+	//这里判断小于0，等于0时当前连接获得最后一个
 	if num < 0 {
-		_, err = redis.String(redisConn.Do("set", pidOverKey, 1))
-		if err != nil && err != redis.ErrNil {
+		err = RedisClusterClient.Set(pidOverKey, 1, 0).Err()
+		if err != nil && err != redis.Nil {
 			ReturnJsonFail(p.Ctx, "设置秒杀结束时错误" + err.Error())
 			return
 		}
@@ -175,8 +171,8 @@ func (p *ProductController) GetOrder() {
 	}
 
 	//标记用户已购买
-	_, err = redis.Int(redisConn.Do("setbit", isRepeatKey, uid, 1))
-	if err != nil && err != redis.ErrNil {
+	err = RedisClusterClient.SetBit(isRepeatKey, uid, 1).Err()
+	if err != nil && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "标记用户已购买时出错")
 		return
 	}

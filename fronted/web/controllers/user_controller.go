@@ -1,10 +1,8 @@
 package controllers
 
 import (
-	"fmt"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
-	"miaosha-demo/common"
 	"miaosha-demo/fronted/middleware"
 	userRpc "miaosha-demo/rpc"
 	"miaosha-demo/services"
@@ -55,23 +53,6 @@ func (u *UserController) GetLogin() mvc.View {
 		Data : iris.Map {
 			"urlSubmit" : "/user/login",
 		},
-	}
-}
-
-var Consul *common.ConsulClient
-func init() {
-	config, err := common.NewConfigConsul()
-	fmt.Println("new config,", err)
-
-	cache := common.NewFreeCacheClient(20)
-
-	Consul, err = common.NewConsulClient(config, cache)
-	fmt.Println("new consul", err)
-
-	//一直watch consul上的service
-	serviceNameList := Consul.Config.GetServiceNameList()
-	for _, serviceName := range serviceNameList {
-		go Consul.WatchServiceByName(serviceName)
 	}
 }
 

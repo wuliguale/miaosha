@@ -1,5 +1,5 @@
 {
-  "host" : "172.17.0.2",
+  "host" : "121.36.61.156",
   "port" : 8500,
   "services" : {
     "miaosha-demo-user" :{
@@ -11,6 +11,17 @@
       "check_real_seconds" : 8,
       "check_output" : "miaosha-demo check output",
       "cache_key" : "consul-user",
+      "cache_seconds" : 30
+    },
+    "miaosha-demo-redis" :{
+      "name" : "miaosha-demo-redis",
+      "tags" : ["miaosha-demo"],
+      "wait_seconds" : 9,
+      "sleep_seconds" : 5,
+      "check_ttl_seconds" : 10,
+      "check_real_seconds" : 8,
+      "check_output" : "miaosha-demo check output",
+      "cache_key" : "consul-redis",
       "cache_seconds" : 30
     }
   }
