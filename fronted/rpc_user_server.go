@@ -87,9 +87,9 @@ func main() {
 	}
 
 	//本机的指定端口
-	//localIp := *flagIp
+	localIp := *flagIp
 	localPort := *flagPort
-	addr := fmt.Sprintf("%s:%d", localPort)
+	addr := fmt.Sprintf("%s:%d", localIp, localPort)
 	log.Println("listen: ", addr)
 
 	//1. protocolFactory
