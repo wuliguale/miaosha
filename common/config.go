@@ -6,7 +6,31 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
+	"runtime"
 )
+
+func init() {
+	//开发环境
+	if runtime.GOOS == "windows" {
+		os.Setenv("CONF_DIR", "D:/Code/go/src/miaosha-demo/conf")
+	} else {
+		out, err := exec.Command("/bin/bash", "-c", "ip addr show | grep 192.168.0.73").Output()
+		if err == nil && len(out) > 0 {
+			//remote
+			os.Setenv("CONF_DIR", "/opt/code/miaosha-demo/conf")
+		} else {
+			//dev
+			os.Setenv("CONF_DIR", "/opt/code/go/src/miaosha-demo/conf")
+		}
+	}
+}
+
+
+//consul的配置文件
+func GetConfigFileConsul() (file string) {
+	return os.Getenv("CONF_DIR") + "/consul.json"
+}
 
 
 type ConfigConsulService struct {
@@ -29,9 +53,7 @@ type ConfigConsul struct {
 
 
 func NewConfigConsul() (configConsul *ConfigConsul, err error){
-	//TODO 配置文件统一存放
-	mainPath, _ := os.Getwd()
-	fileName := mainPath + "/../conf/consul.json"
+	fileName := GetConfigFileConsul()
 	consulByte, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		log.Fatalln("conf read fail", err)

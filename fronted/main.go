@@ -8,6 +8,7 @@ import (
 	"miaosha-demo/common"
 	"miaosha-demo/fronted/web/controllers"
 	"miaosha-demo/repositories"
+	"miaosha-demo/rpc"
 	"miaosha-demo/services"
 )
 
@@ -26,16 +27,30 @@ func main() {
 		ctx.View("error.html")
 	})
 
-	//连接数据库
-	db, err := common.NewMysqlConn()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	userRepository := repositories.NewUserRepository(db)
+	config, err := common.NewConfigConsul()
+	fmt.Println("new config,", err)
+	cache := common.NewFreeCacheClient(20)
+
+	Consul, err := common.NewConsulClient(config, cache)
+	fmt.Println("new consul", err)
+
+	//一直watch consul上的service
+	//todo watch中修改全局的pool
+	serviceNameList := Consul.Config.GetServiceNameList()
+	for _, serviceName := range serviceNameList {
+		go Consul.WatchServiceByName(serviceName)
+	}
+
+	//取consul上redis service的配置
+	redisClusterClient, err := common.NewRedisClusterClient(Consul)
+	mysqlPool, err := common.NewMysqlPool(Consul)
+	rabbitmqPool, err := common.NewRabbitmqPool(Consul)
+	rpcUser, err := user.NewRpcUser(Consul)
+
+	userRepository := repositories.NewUserRepository(mysqlPool)
 	userService := services.NewUserService(userRepository)
 
 	//首页
@@ -47,16 +62,16 @@ func main() {
 	index := mvc.New(indexParty)
 	index.Handle(new(controllers.IndexController))
 
-	productRepository := repositories.NewProductRepository(db)
+	productRepository := repositories.NewProductRepository(mysqlPool)
 	productService := services.NewProductService(productRepository)
 	productParty := app.Party("/product")
 	product := mvc.New(productParty)
-	product.Register(ctx, productService)
+	product.Register(ctx, productService, redisClusterClient, rabbitmqPool)
 	product.Handle(new(controllers.ProductController))
 
 	userParty := app.Party("/user")
 	user := mvc.New(userParty)
-	user.Register(ctx, userService)
+	user.Register(ctx, userService, rpcUser)
 	user.Handle(new(controllers.UserController))
 
 	app.Run(

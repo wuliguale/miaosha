@@ -4,7 +4,7 @@ import (
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
 	"miaosha-demo/fronted/middleware"
-	userRpc "miaosha-demo/rpc"
+	"miaosha-demo/rpc"
 	"miaosha-demo/services"
 	"time"
 )
@@ -12,6 +12,7 @@ import (
 type UserController struct {
 	Ctx     iris.Context
 	UserService services.IUserService
+	RpcUser *user.RpcUser
 }
 
 
@@ -37,8 +38,7 @@ func (u *UserController) PostRegister() mvc.View {
 	nickName := u.Ctx.FormValue("nickname")
 	password := u.Ctx.FormValue("password")
 
-	serviceInfo, err := Consul.GetServiceByName(Consul.Config.GetRpcUserServiceName())
-	_, err = userRpc.RpcUserServiceReg(serviceInfo.Host, serviceInfo.Port, userName, nickName, password)
+	_, err := u.RpcUser.CallReg(userName, nickName, password)
 	if err != nil {
 		return errorReturnView(u.Ctx, err.Error(), "/", 500)
 	}
@@ -62,8 +62,7 @@ func (u *UserController) PostLogin() mvc.View {
 	userName := u.Ctx.FormValue("username")
 	password := u.Ctx.FormValue("password")
 
-	serviceInfo, err := Consul.GetServiceByName(Consul.Config.GetRpcUserServiceName())
-	user, err := userRpc.RpcUserServiceLogin(serviceInfo.Host, serviceInfo.Port, userName, password)
+	user, err := u.RpcUser.RpcUserServiceLogin(userName, password)
 	if err != nil {
 		return messageThenRedirect("密码错误", "/user/login")
 	}

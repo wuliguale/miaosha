@@ -18,6 +18,8 @@ type ProductController struct {
 	Ctx            iris.Context
 	ProductService services.IProductService
 	OrderService   services.IOrderService
+	RedisClusterClient *redis.ClusterClient
+	RabbitmqPool *common.RabbitmqPool
 	Session        *sessions.Session
 }
 
@@ -98,7 +100,7 @@ func (p *ProductController) GetOrder() {
 
 	//秒杀是否已结束
 	pidOverKey := "pid_over_" + strconv.Itoa(int(pid))
-	isOver, err := RedisClusterClient.Get(pidOverKey).Int()
+	isOver, err := p.RedisClusterClient.Get(pidOverKey).Int()
 	if err != nil  && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "检查秒杀是否结束出错" + err.Error())
 		return
@@ -110,7 +112,7 @@ func (p *ProductController) GetOrder() {
 
 	//是否重复购买
 	isRepeatKey := "pid_" + strconv.Itoa(int(pid))
-	isRepeat, err := RedisClusterClient.GetBit(isRepeatKey, uid).Result()
+	isRepeat, err := p.RedisClusterClient.GetBit(isRepeatKey, uid).Result()
 	if err != nil && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "检查是否重复购买出错" + err.Error())
 		return
@@ -122,14 +124,14 @@ func (p *ProductController) GetOrder() {
 
 	//检查库存
 	numKey := "pid_num_" + strconv.Itoa(int(pid))
-	num, err := RedisClusterClient.Decr(numKey).Result()
+	num, err := p.RedisClusterClient.Decr(numKey).Result()
 	if err != nil && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "redis检查库存错误" + err.Error())
 		return
 	}
 	//这里判断小于0，等于0时当前连接获得最后一个
 	if num < 0 {
-		err = RedisClusterClient.Set(pidOverKey, 1, 0).Err()
+		err = p.RedisClusterClient.Set(pidOverKey, 1, 0).Err()
 		if err != nil && err != redis.Nil {
 			ReturnJsonFail(p.Ctx, "设置秒杀结束时错误" + err.Error())
 			return
@@ -139,7 +141,10 @@ func (p *ProductController) GetOrder() {
 		return
 	}
 
-	ch, err := RabbitMqConn.Channel()
+	rabbitmq, err := p.RabbitmqPool.Get()
+	defer p.RabbitmqPool.Put(rabbitmq)
+
+	ch, err := rabbitmq.Channel()
 	if err != nil {
 		ReturnJsonFail(p.Ctx, "rabbitmq channel错误")
 		return
@@ -171,7 +176,7 @@ func (p *ProductController) GetOrder() {
 	}
 
 	//标记用户已购买
-	err = RedisClusterClient.SetBit(isRepeatKey, uid, 1).Err()
+	err = p.RedisClusterClient.SetBit(isRepeatKey, uid, 1).Err()
 	if err != nil && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "标记用户已购买时出错")
 		return

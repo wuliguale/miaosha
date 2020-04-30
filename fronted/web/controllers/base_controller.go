@@ -1,45 +1,13 @@
 package controllers
 
 import (
-	"fmt"
-	"github.com/go-redis/redis/v7"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
-	"github.com/streadway/amqp"
-	"miaosha-demo/common"
 )
 
 
 const RETURN_SUCCESS  = 0
 const RETURN_FAIL  = 1
-
-var Consul *common.ConsulClient
-//初始化redis连接
-var RedisClusterClient *redis.ClusterClient
-//初始化rabbitmq连接
-var RabbitMqConn *amqp.Connection
-
-func init() {
-	RabbitMqConn, _ = common.NewRabbitMqConn()
-
-	config, err := common.NewConfigConsul()
-	fmt.Println("new config,", err)
-
-	cache := common.NewFreeCacheClient(20)
-
-	Consul, err = common.NewConsulClient(config, cache)
-	fmt.Println("new consul", err)
-
-	//一直watch consul上的service
-	serviceNameList := Consul.Config.GetServiceNameList()
-	for _, serviceName := range serviceNameList {
-		go Consul.WatchServiceByName(serviceName)
-	}
-
-	//取consul上redis service的配置
-	RedisClusterClient, err = common.NewRedisClusterClient(Consul)
-}
-
 
 
 //显示错误

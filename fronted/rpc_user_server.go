@@ -16,45 +16,29 @@ import (
 
 //rpc UserService的服务端
 type UserServiceHandler struct {
-	UserService services.IUserService
-	ConsulClient *common.ConsulClient
+	MysqlPool *common.MysqlPool
 }
 
-func NewUserServiceHandler() (userServiceHandler *UserServiceHandler, err error) {
-	db, err := common.NewMysqlConn()
-	if err != nil {
-		log.Fatalln("prc user new  handler fail", err)
-	}
-
-	userService := services.NewUserService(repositories.NewUserRepository(db))
-
-	consulConfig, err := common.NewConfigConsul()
-	if err != nil {
-		log.Fatalln("new config consul fail: ", err)
-	}
-
-	consulClient, err := common.NewConsulClient(consulConfig, nil)
-	if err != nil {
-		log.Fatalln("new consul client fail: ", err)
-	}
-
-	return &UserServiceHandler{userService, consulClient}, nil
+func NewUserServiceHandler(mysqlPool *common.MysqlPool) (userServiceHandler *UserServiceHandler, err error) {
+	return &UserServiceHandler{mysqlPool}, nil
 }
 
 
 func (h *UserServiceHandler) Reg(ctx context.Context, userName, nickName, password string) (*user.UserStruct, error) {
+	userService := services.NewUserService(repositories.NewUserRepository(h.MysqlPool))
+
 	modelUser := &datamodels.User{
 		UserName: userName,
 		NickName: nickName,
 		Password: password,
 	}
 
-	err := h.UserService.InsertUser(modelUser)
+	err := userService.InsertUser(modelUser)
 	if err != nil {
 		return &user.UserStruct{}, err
 	}
 
-	modelUser, err  = h.UserService.GetUserByName(userName)
+	modelUser, err  = userService.GetUserByName(userName)
 	if err != nil {
 		return &user.UserStruct{}, err
 	}
@@ -65,7 +49,9 @@ func (h *UserServiceHandler) Reg(ctx context.Context, userName, nickName, passwo
 
 
 func (h *UserServiceHandler) Login(ctx context.Context, userName , password string) (*user.UserStruct, error) {
-	modelUser, isOk := h.UserService.IsPwdSuccess(userName, password)
+	userService := services.NewUserService(repositories.NewUserRepository(h.MysqlPool))
+
+	modelUser, isOk := userService.IsPwdSuccess(userName, password)
 	if !isOk {
 		return &user.UserStruct{}, errors.New("login fail")
 	}
@@ -86,7 +72,7 @@ func (h *UserServiceHandler) ModelUser2StructUset(modelUser *datamodels.User) *u
 	}
 }
 
-//   ./rpc_user_server -ip 127.0.0.1 -port 9090
+//   ./rpc_user_server -ip 127.0.0.1 -port 9001
 func main() {
 	flagIp := flag.String("ip", "", "rpc server ip")
 	//指定监听端口
@@ -101,7 +87,7 @@ func main() {
 	}
 
 	//本机的指定端口
-	localIp := *flagIp
+	//localIp := *flagIp
 	localPort := *flagPort
 	addr := fmt.Sprintf("127.0.0.1:%d", localPort)
 	log.Println("listen: ", addr)
@@ -118,8 +104,17 @@ func main() {
 		log.Fatalln("rpc user new socket fail", err)
 	}
 
+	config, err := common.NewConfigConsul()
+	freeCache := common.NewFreeCacheClient(5)
+	consulClient, err := common.NewConsulClient(config, freeCache)
+
+	mysqlPool, err := common.NewMysqlPool(consulClient)
+	if err != nil {
+
+	}
+
 	//4. xxxHandler
-	handler, err := NewUserServiceHandler()
+	handler, err := NewUserServiceHandler(mysqlPool)
 	if err != nil {
 		log.Fatalln("new userServiceHandler fail: ", err)
 	}
@@ -129,18 +124,6 @@ func main() {
 
 	//6. NewTSimpleServer4
 	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
-
-	//这里直接知道服务名
-	serviceConfig, err := handler.ConsulClient.Config.GetServiceConfigByName(handler.ConsulClient.Config.GetRpcUserServiceName())
-	if err != nil {
-		log.Fatalln("get service config fail: ", err)
-	}
-	log.Println("serviceConfig: ", serviceConfig)
-
-	err = handler.ConsulClient.RegisterServer(serviceConfig.Name, serviceConfig.Tags, localIp, localPort)
-	if err != nil {
-		log.Fatalln("rpc user register service fail ", err)
-	}
 
 	server.Serve()
 }

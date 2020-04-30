@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	//"github.com/garyburd/redigo/redis"
 	//"miaosha-demo/fronted/web/controllers"
 	//"strconv"
@@ -11,6 +13,10 @@ import (
 import redis2 "github.com/go-redis/redis/v7"
 
 func main() {
+	path, err := os.Getwd()
+	fmt.Println(path, err)
+	return
+	
 	ExampleClient()
 
 	return
@@ -43,18 +49,6 @@ func ExampleClient() {
 
 	a, err := client.Get("a").Result()
 	fmt.Println(a, err)
-
-	aa, err := client.Decr("a").Result()
-	fmt.Println(aa, err)
-
-	aaa, err := client.Decr("a").Result()
-	fmt.Println(aaa, err)
-
-	b, err := client.Get("b").Result()
-	fmt.Println(b, err)
-
-	c, err := client.Get("c").Result();
-	fmt.Println(c, err)
 	return
 
 

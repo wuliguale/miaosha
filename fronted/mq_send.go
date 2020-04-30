@@ -8,7 +8,8 @@ import (
 )
 
 func main() {
-	conn, err := amqp.Dial("amqp://root:root@192.168.125.128:5672/")
+	//不需要http://xxx
+	conn, err := amqp.Dial("amqp://root:root@121.36.61.156/:5672/")
 	common.FailOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 

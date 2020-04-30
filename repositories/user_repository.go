@@ -8,35 +8,29 @@ import (
 )
 
 type IUser interface {
-	Conn() error
 	Insert(user *datamodels.User) error
 	SelectByName(userName string) (user *datamodels.User, err error)
 	SelectByPk(uid uint64) (user *datamodels.User, err error)
 }
 
 type UserRepository struct {
-	mysqlConn *gorm.DB
+	mysqlPool *common.MysqlPool
 }
 
-func NewUserRepository(db *gorm.DB) IUser {
-	return &UserRepository{mysqlConn: db}
-}
-
-
-func (u *UserRepository) Conn() (err error) {
-	if u.mysqlConn == nil {
-		mysql, errMysql := common.NewMysqlConn()
-		if errMysql != nil {
-			return errMysql
-		}
-		u.mysqlConn = mysql
-	}
-	return nil
+func NewUserRepository(mysqlPool *common.MysqlPool) IUser {
+	return &UserRepository{mysqlPool:mysqlPool}
 }
 
 func (u *UserRepository) SelectByPk(uid uint64) (user *datamodels.User, err error) {
+	db, err := u.mysqlPool.Get()
+	defer u.mysqlPool.Put(db)
+
+	if err != nil {
+		return nil, err
+	}
+
 	user = &datamodels.User{}
-	res := u.mysqlConn.First(user, uid)
+	res := db.First(user, uid)
 	return user, res.Error
 }
 
@@ -48,12 +42,13 @@ func (u *UserRepository) SelectByName(userName string) (user *datamodels.User, e
 		return user, errors.New("userName empty")
 	}
 
-	err = u.Conn()
+	db, err := u.mysqlPool.Get()
+	defer u.mysqlPool.Put(db)
 	if err != nil {
-		return user, err
+		return nil, err
 	}
 
-	res := u.mysqlConn.Where("user_name = ?", userName).First(user)
+	res := db.Where("user_name = ?", userName).First(user)
 	if gorm.IsRecordNotFoundError(res.Error) {
 		return user, errors.New("user not exist")
 	}
@@ -62,5 +57,11 @@ func (u *UserRepository) SelectByName(userName string) (user *datamodels.User, e
 }
 
 func (u *UserRepository) Insert(user *datamodels.User) error {
-	return u.mysqlConn.Create(user).Error
+	db, err := u.mysqlPool.Get()
+	defer u.mysqlPool.Put(db)
+	if err != nil {
+		return err
+	}
+
+	return db.Create(user).Error
 }

@@ -13,7 +13,16 @@ import (
 )
 
 func main() {
-	conn, err := common.NewRabbitMqConn()
+	config, err := common.NewConfigConsul()
+	freeCache := common.NewFreeCacheClient(10)
+	consulClient, err := common.NewConsulClient(config, freeCache)
+
+	//连接db
+	mysqlPool, err := common.NewMysqlPool(consulClient)
+
+	rabbitmqPool, err := common.NewRabbitmqPool(consulClient)
+	conn, err := rabbitmqPool.Get()
+	//conn, err := amqp.Dial("amqp://root:root@172.18.0.99/:5672/")
 	common.FailOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
@@ -131,7 +140,6 @@ func main() {
 	)
 	common.FailOnError(err, "Failed to bind queue dead")
 
-
 	//正常消费
 	msgs, err := ch.Consume(
 		q.Name,
@@ -144,17 +152,11 @@ func main() {
 	)
 	common.FailOnError(err, "Failed to register  consumer")
 
-	//连接db
-	db, err := common.NewMysqlConn()
-	if err != nil {
-		common.FailOnError(err, "new db fail")
-	}
-
-	orderRepository := repositories.NewOrderRepository(db)
-	orderService := services.NewOrderService(orderRepository)
-
 	go func() {
 		for d := range msgs {
+			orderRepository := repositories.NewOrderRepository(mysqlPool)
+			orderService := services.NewOrderService(orderRepository)
+
 			uidPidSlice := strings.Split(string(d.Body), "_")
 			pid, err := strconv.Atoi(uidPidSlice[0])
 			if err != nil {

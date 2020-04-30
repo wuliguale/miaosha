@@ -103,6 +103,8 @@ func NewConsulClient(configConsul *ConfigConsul, freeCache *FreeCacheClient) (c 
 
 	//从配置文件取，agent的负载均衡地址
 	config.Address = fmt.Sprintf("%s:%d", configConsul.Host, configConsul.Port)
+	fmt.Println(config.Address)
+
 	client, err := api.NewClient(config)
 
 	if err != nil {
@@ -210,6 +212,7 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 
 		//数据有变化才写入，避免频繁写入，如果cache过期可以在get时加入，不需要watch时一直写
 		if lastIndex != metaInfo.LastIndex{
+			//todo	 use callback update redis connection
 			//有数据
 			if len(serviceList) >= 0 {
 				serviceInfoList := client.FormatApiServiceList2ServiceInfoList(serviceName, serviceList)

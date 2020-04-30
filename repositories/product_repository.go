@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"errors"
-	"github.com/jinzhu/gorm"
+	"miaosha-demo/common"
 	"miaosha-demo/datamodels"
 )
 
@@ -15,16 +15,22 @@ type IProduct interface {
 }
 
 type ProductRepository struct {
-	mysqlConn *gorm.DB
+	mysqlPool *common.MysqlPool
 }
 
-func NewProductRepository(db *gorm.DB) IProduct {
-	return &ProductRepository{mysqlConn: db}
+func NewProductRepository(mysqlPool *common.MysqlPool) IProduct {
+	return &ProductRepository{mysqlPool:mysqlPool}
 }
 
 func (p *ProductRepository) SelectByPk(pid uint64) (product *datamodels.Product, err error) {
+	db, err := p.mysqlPool.Get()
+	defer p.mysqlPool.Put(db)
+	if err != nil {
+		return nil, err
+	}
+
 	product = &datamodels.Product{}
-	res := p.mysqlConn.First(product, pid)
+	res := db.First(product, pid)
 	return product, res.Error
 }
 
@@ -46,24 +52,47 @@ func (p *ProductRepository) SelectAll(page, pageSize int64, orderField string, o
 		orderBy += " ASC"
 	}
 
+	db, err := p.mysqlPool.Get()
+	defer p.mysqlPool.Put(db)
+	if err != nil {
+		return nil, err
+	}
+
 	productList = []*datamodels.Product{}
-	res := p.mysqlConn.Order(orderBy).Offset(offset).Limit(pageSize).Find(&productList)
+	res := db.Order(orderBy).Offset(offset).Limit(pageSize).Find(&productList)
 	return productList, res.Error
 }
 
 
 func (p *ProductRepository) Insert(product *datamodels.Product) error {
-	return p.mysqlConn.Create(product).Error
+	db, err := p.mysqlPool.Get()
+	defer p.mysqlPool.Put(db)
+	if err != nil {
+		return  err
+	}
+	return db.Create(product).Error
 }
 
 
 func (p *ProductRepository) Update(product *datamodels.Product) error {
-	return p.mysqlConn.Save(product).Error
+	db, err := p.mysqlPool.Get()
+	defer p.mysqlPool.Put(db)
+	if err != nil {
+		return err
+	}
+
+	return db.Save(product).Error
 }
 
 
 func (p *ProductRepository) Delete(product *datamodels.Product) error {
-	return p.mysqlConn.Delete(product).Error
+	db, err := p.mysqlPool.Get()
+	defer p.mysqlPool.Put(db)
+	if err != nil {
+		return  err
+	}
+
+	return db.Delete(product).Error
 }
 
 
