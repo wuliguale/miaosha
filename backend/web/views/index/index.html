@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>后台首页</title>
+</head>
+<body>
+
+{{range $v := .data}}
+    <div>
+        <p><a href="{{$v.url}}">{{$v.desc}}</a></p>
+    </div>
+{{end}}
+
+</body>
+</html>

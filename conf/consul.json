@@ -1,0 +1,54 @@
+{
+  "host" : "121.36.61.156",
+  "port" : 8500,
+  "services" : {
+    "miaosha-demo-proxysql" :{
+      "name" : "miaosha-demo-proxysql",
+      "tags" : ["miaosha-demo"],
+      "wait_seconds" : 9,
+      "sleep_seconds" : 5,
+      "check_ttl_seconds" : 10,
+      "check_real_seconds" : 8,
+      "check_output" : "miaosha-demo check output",
+      "cache_key" : "consul-proxysql",
+      "cache_seconds" : 30
+    },
+    "miaosha-demo-redis" :{
+      "name" : "miaosha-demo-redis",
+      "tags" : ["miaosha-demo"],
+      "wait_seconds" : 9,
+      "sleep_seconds" : 5,
+      "check_ttl_seconds" : 10,
+      "check_real_seconds" : 8,
+      "check_output" : "miaosha-demo check output",
+      "cache_key" : "consul-redis",
+      "cache_seconds" : 30
+    },
+    "miaosha-demo-rabbitmq" :{
+      "name" : "miaosha-demo-rabbitmq",
+      "tags" : ["miaosha-demo"],
+      "wait_seconds" : 9,
+      "sleep_seconds" : 5,
+      "check_ttl_seconds" : 10,
+      "check_real_seconds" : 8,
+      "check_output" : "miaosha-demo check output",
+      "cache_key" : "consul-rabbitmq",
+      "cache_seconds" : 30
+    },
+    "miaosha-demo-rpc-user" :{
+      "name" : "miaosha-demo-rpc-user",
+      "tags" : ["miaosha-demo"],
+      "wait_seconds" : 9,
+      "sleep_seconds" : 5,
+      "check_ttl_seconds" : 10,
+      "check_real_seconds" : 8,
+      "check_output" : "miaosha-demo check output",
+      "cache_key" : "consul-rpc-user",
+      "cache_seconds" : 30
+    }
+  }
+}
+
+
+
+

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>商品编辑</title>
+</head>
+<body>
+<div>
+    <a href="{{.urlBack}}"><button>返回</button></a>
+    <br>
+    <form action="{{.urlSubmit}}" method="post">
+        <input type="hidden" name="id" value="{{.product.Id}}">
+        名称：
+        <input type="text" name="name" value="{{.product.ProductName}}">
+        <br>
+        数量：
+        <input type="text" name="num" value="{{.product.Num}}">
+        <br>
+        图片：
+        <input type="text" name="image" value="{{.product.Image}}">
+        <br>
+        地址：
+        <input type="text" name="url" value="{{.product.Url}}">
+        <br>
+        添加时间：
+        <p>{{.product.CreateAtStr}}</p>
+        <br>
+        上次修改时间：
+        <p>{{.product.UpdateAtStr}}</p>
+        <br>
+        <input type="submit" value="提交">
+        <br>
+    </form>
+</div>
+</body>
+</html>
