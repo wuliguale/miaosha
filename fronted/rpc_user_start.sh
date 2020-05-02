@@ -5,7 +5,7 @@ rm rpc_user_server
 
 go build rpc_user_server.go
 
-ps -aux | grep "rpc_user.*" | grep -v grep | awk '{print $2}' | while read pid
+ps -aux | grep rpc_user_server | grep -v grep | grep -v \.sh | awk '{print $2}' | while read pid
 do
     echo "kill rpc user $pid"
     kill -9 $pid
