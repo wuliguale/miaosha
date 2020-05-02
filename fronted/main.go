@@ -46,11 +46,12 @@ func main() {
 
 	//取consul上redis service的配置
 	redisClusterClient, err := common.NewRedisClusterClient(Consul)
-	mysqlPool, err := common.NewMysqlPool(Consul)
+	mysqlPoolUser, err := common.NewMysqlPoolUser(Consul)
+	mysqlPoolProduct, err := common.NewMysqlPoolProduct(Consul)
 	rabbitmqPool, err := common.NewRabbitmqPool(Consul)
 	rpcUser, err := user.NewRpcUser(Consul)
 
-	userRepository := repositories.NewUserRepository(mysqlPool)
+	userRepository := repositories.NewUserRepository(mysqlPoolUser)
 	userService := services.NewUserService(userRepository)
 
 	//首页
@@ -62,7 +63,7 @@ func main() {
 	index := mvc.New(indexParty)
 	index.Handle(new(controllers.IndexController))
 
-	productRepository := repositories.NewProductRepository(mysqlPool)
+	productRepository := repositories.NewProductRepository(mysqlPoolProduct)
 	productService := services.NewProductService(productRepository)
 	productParty := app.Party("/product")
 	product := mvc.New(productParty)

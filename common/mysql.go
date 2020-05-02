@@ -9,11 +9,21 @@ import (
 )
 
 
+func NewMysqlPoolUser(consul *ConsulClient) (mysqlPool *MysqlPool, err error) {
+	return NewMysqlPool(consul, "miaosha-user")
+}
+
+
+func NewMysqlPoolProduct(consul *ConsulClient) (mysqlPool *MysqlPool, err error) {
+	return NewMysqlPool(consul, "miaosha-product")
+}
+
+
 type MysqlPool struct {
 	pool *Pool
 }
 
-func NewMysqlPool(consul *ConsulClient) (mysqlPool *MysqlPool, err error) {
+func NewMysqlPool(consul *ConsulClient, dbName string) (mysqlPool *MysqlPool, err error) {
 	serviceName := "miaosha-demo-proxysql"
 	serviceInfoList, err := consul.GetServiceListByName(serviceName)
 	if err != nil {
@@ -27,7 +37,7 @@ func NewMysqlPool(consul *ConsulClient) (mysqlPool *MysqlPool, err error) {
 			"port" : strconv.Itoa(serviceInfo.Port),
 			"user" : "user1",
 			"password" : "password1",
-			"db" : "miaosha-product",
+			"db" : dbName,
 		}
 
 		addressList = append(addressList, address)

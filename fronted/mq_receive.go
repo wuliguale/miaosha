@@ -18,7 +18,7 @@ func main() {
 	consulClient, err := common.NewConsulClient(config, freeCache)
 
 	//连接db
-	mysqlPool, err := common.NewMysqlPool(consulClient)
+	mysqlPoolProduct, err := common.NewMysqlPoolProduct(consulClient)
 
 	rabbitmqPool, err := common.NewRabbitmqPool(consulClient)
 	conn, err := rabbitmqPool.Get()
@@ -154,7 +154,7 @@ func main() {
 
 	go func() {
 		for d := range msgs {
-			orderRepository := repositories.NewOrderRepository(mysqlPool)
+			orderRepository := repositories.NewOrderRepository(mysqlPoolProduct)
 			orderService := services.NewOrderService(orderRepository)
 
 			uidPidSlice := strings.Split(string(d.Body), "_")

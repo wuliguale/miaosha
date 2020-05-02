@@ -108,13 +108,13 @@ func main() {
 	freeCache := common.NewFreeCacheClient(5)
 	consulClient, err := common.NewConsulClient(config, freeCache)
 
-	mysqlPool, err := common.NewMysqlPool(consulClient)
+	mysqlPoolUser, err := common.NewMysqlPoolUser(consulClient)
 	if err != nil {
 
 	}
 
 	//4. xxxHandler
-	handler, err := NewUserServiceHandler(mysqlPool)
+	handler, err := NewUserServiceHandler(mysqlPoolUser)
 	if err != nil {
 		log.Fatalln("new userServiceHandler fail: ", err)
 	}
