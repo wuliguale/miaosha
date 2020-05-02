@@ -44,19 +44,18 @@ func (p *ProductController) GetAll() mvc.View{
 
 	for k,v := range productListMap {
 		pidStr := fmt.Sprintf("%v", v["Id"])
-
-		//url validate in 10 seconds
-		jwtClaims := jwt.MapClaims{"uid" : uidStr, "pid" : pidStr, "nbf" : time.Now().Unix() + 10}
+		//TODO	get nbf from product
+		jwtClaims := jwt.MapClaims{"uid" : uidStr, "pid" : pidStr, "nbf" : time.Now().Unix() - 10}
 
 		jwtStr, err := common.JwtSign(jwtClaims)
 		if err != nil {
 			return errorReturnView(p.Ctx, err.Error(), "/", 500)
 		}
-
+		
 		v["UrlDetail"] = "/product/one?id=" + pidStr
 
 		//秒杀接口使用单独的域名，不和商品页面使用同一个域名
-		v["UrlOrder"] = "/product/order?jwt=" + jwtStr
+		v["UrlOrder"] = "http://121.36.61.156:8000/product/order?jwt=" + jwtStr
 		productListMap[k] = v
 	}
 
@@ -93,8 +92,33 @@ func (p *ProductController) GetOne() mvc.View{
 
 //秒杀接口，从kong负载均衡过来
 func (p *ProductController) GetOrder() {
-	pid := p.Ctx.URLParamInt64Default("pid", 0)
-	uid, err := services.GetUidFromCookie(p.Ctx)
+	jwt := p.Ctx.URLParam("jwt")
+	jwtMap, err := common.JwtParse(jwt)
+
+	if err != nil {
+		ReturnJsonFail(p.Ctx, "jwt错误")
+		return
+	}
+
+	fmt.Println(jwtMap)
+
+	pidStr := jwtMap["pid"].(string)
+	uidStr := jwtMap["uid"].(string)
+
+	pidInt, err := strconv.Atoi(pidStr)
+	if err != nil {
+		ReturnJsonFail(p.Ctx, "参数错误")
+		return
+	}
+	uidInt, err := strconv.Atoi(uidStr)
+	if err != nil {
+		ReturnJsonFail(p.Ctx, "参数错误")
+		return
+	}
+
+	pid := int64(pidInt)
+	uid := int64(uidInt)
+
 	if pid == 0 || uid == 0 || err != nil {
 		ReturnJsonFail(p.Ctx, "参数错误")
 		return
