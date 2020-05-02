@@ -37,7 +37,7 @@ func NewRabbitmqPool(consul *ConsulClient) (rabbitmqPool *RabbitmqPool, err erro
 	makeFunc := func(address map[string]string) (io.Closer, error) {
 		//*amqp.Connection
 		//return amqp.Dial("amqp://root:root@172.18.0.99:5672/")
-		url := fmt.Sprintf("amqp://%s:%s@http://%s/:%s/", address["user"], address["password"], address["host"], address["port"])
+		url := fmt.Sprintf("amqp://%s:%s@%s:%s/", address["user"], address["password"], address["host"], address["port"])
 		fmt.Println(url)
 		return amqp.Dial(url)
 	}
