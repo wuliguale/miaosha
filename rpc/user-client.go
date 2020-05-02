@@ -67,7 +67,7 @@ func NewTransportPool(consul *common.ConsulClient) (pool *common.Pool, err error
 	fmt.Println(addressList)
 
 	makeFunc := func(address map[string]string) (io.Closer, error) {
-		addr := fmt.Sprintf("%s:%d", address["host"], address["port"])
+		addr := fmt.Sprintf("%s:%s", address["host"], address["port"])
 		transportFactory := thrift.NewTTransportFactory()
 
 		//TSocket实现了TTransport接口
