@@ -36,8 +36,9 @@ func NewRabbitmqPool(consul *ConsulClient) (rabbitmqPool *RabbitmqPool, err erro
 
 	makeFunc := func(address map[string]string) (io.Closer, error) {
 		//*amqp.Connection
-		//return amqp.Dial("amqp://root:root@http://172.18.0.99/:5672/")
+		//return amqp.Dial("amqp://root:root@172.18.0.99:5672/")
 		url := fmt.Sprintf("amqp://%s:%s@http://%s/:%s/", address["user"], address["password"], address["host"], address["port"])
+		fmt.Println(url)
 		return amqp.Dial(url)
 	}
 
@@ -50,7 +51,7 @@ func NewRabbitmqPool(consul *ConsulClient) (rabbitmqPool *RabbitmqPool, err erro
 }
 
 
-func (rabbitmqPool RabbitmqPool) Get() (conn *amqp.Connection, err error) {
+func (rabbitmqPool *RabbitmqPool) Get() (conn *amqp.Connection, err error) {
 	closer, err := rabbitmqPool.pool.Get()
 	if err != nil {
 		fmt.Println("get error", err)
@@ -66,12 +67,12 @@ func (rabbitmqPool RabbitmqPool) Get() (conn *amqp.Connection, err error) {
 }
 
 
-func (rabbitmqPool RabbitmqPool) Put(conn *amqp.Connection) error {
+func (rabbitmqPool *RabbitmqPool) Put(conn *amqp.Connection) error {
 	return rabbitmqPool.pool.Put(conn)
 }
 
 
-func (rabbitmqPool RabbitmqPool) Close(conn *amqp.Connection) error {
+func (rabbitmqPool *RabbitmqPool) Close(conn *amqp.Connection) error {
 	return rabbitmqPool.pool.CloseConn(conn)
 }
 
