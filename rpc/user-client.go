@@ -94,6 +94,8 @@ func (rpcUser *RpcUser) Call(method string, vals ...string) (userStruct *user.Us
 	fmt.Println(err)
 
 	transport, ok := closer.(thrift.TTransport)
+	defer rpcUser.transportPool.Put(transport)
+
 	if !ok {
 
 	}
@@ -111,14 +113,14 @@ func (rpcUser *RpcUser) Call(method string, vals ...string) (userStruct *user.Us
 
 	//client.Reg(defaultCtx, userName, nickName, password)
 	res := reflect.ValueOf(client).MethodByName(method).Call(in)
+	
+	if res[1].Interface() != nil {
+		return nil, res[1].Interface().(error)
+	}
 
 	//res返回的是method的返回值的slice
 	userStruct = res[0].Interface().(*user.UserStruct)
-	err  = res[1].Interface().(error)
-
-	rpcUser.transportPool.Put(transport)
-	
-	return userStruct, err
+	return userStruct, nil
 }
 
 
