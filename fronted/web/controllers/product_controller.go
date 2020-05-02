@@ -12,6 +12,7 @@ import (
 	"miaosha-demo/common"
 	"miaosha-demo/services"
 	"strconv"
+	"time"
 )
 
 type ProductController struct {
@@ -44,7 +45,8 @@ func (p *ProductController) GetAll() mvc.View{
 	for k,v := range productListMap {
 		pidStr := fmt.Sprintf("%v", v["Id"])
 
-		jwtClaims := jwt.MapClaims{"uid" : uidStr, "pid" : pidStr, "nbf" : 1584273600}
+		//url validate in 10 seconds
+		jwtClaims := jwt.MapClaims{"uid" : uidStr, "pid" : pidStr, "nbf" : time.Now().Unix() + 10}
 
 		jwtStr, err := common.JwtSign(jwtClaims)
 		if err != nil {
