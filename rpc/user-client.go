@@ -108,13 +108,17 @@ func (rpcUser *RpcUser) Call(method string, vals ...string) (userStruct *user.Us
 	for _, v := range vals {
 		in = append(in, reflect.ValueOf(v))
 	}
-	abc := reflect.ValueOf(client).MethodByName(method).Call(in)
-	userStruct = abc[0].Interface().(*user.UserStruct)
-	//return client.Reg(defaultCtx, userName, nickName, password)
+
+	//client.Reg(defaultCtx, userName, nickName, password)
+	res := reflect.ValueOf(client).MethodByName(method).Call(in)
+
+	//res返回的是method的返回值的slice
+	userStruct = res[0].Interface().(*user.UserStruct)
+	err  = res[1].Interface().(error)
 
 	rpcUser.transportPool.Put(transport)
-
-	return userStruct, nil
+	
+	return userStruct, err
 }
 
 
