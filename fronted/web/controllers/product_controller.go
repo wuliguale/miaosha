@@ -90,6 +90,35 @@ func (p *ProductController) GetOne() mvc.View{
 }
 
 
+func (p *ProductController) GetRedisInit() {
+	pid, err := p.Ctx.URLParamInt("pid")
+	if err != nil {
+		fmt.Println(pid)
+		return
+	}
+
+	product, err := p.ProductService.GetProductByID(uint64(pid))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	num := product.Num
+	redisKey := fmt.Sprintf("pid_num_%d", pid)
+	if num > 0 {
+		p.RedisClusterClient.Set(redisKey, num, time.Hour * 24)
+	}
+
+	cacheRes, err := p.RedisClusterClient.Get(redisKey).Int()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("get cache: ", cacheRes)
+}
+
+
 //秒杀接口，从kong负载均衡过来
 func (p *ProductController) GetOrder() {
 	jwtStr := p.Ctx.URLParam("jwt")
