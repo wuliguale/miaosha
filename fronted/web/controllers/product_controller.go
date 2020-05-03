@@ -92,8 +92,8 @@ func (p *ProductController) GetOne() mvc.View{
 
 //秒杀接口，从kong负载均衡过来
 func (p *ProductController) GetOrder() {
-	jwt := p.Ctx.URLParam("jwt")
-	jwtMap, err := common.JwtParse(jwt)
+	jwtStr := p.Ctx.URLParam("jwt")
+	jwtMap, err := common.JwtParse(jwtStr)
 
 	if err != nil {
 		ReturnJsonFail(p.Ctx, "jwt错误")
