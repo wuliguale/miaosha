@@ -169,3 +169,47 @@ func GetLocalIP() string {
 }
 
 
+
+func SelectReceiveWithTimeout(ch interface{}, timeout time.Duration) (res interface{}, err error) {
+	ch1, ok := ch.(chan interface{})
+	if !ok {
+		return nil, errors.New("ch not chan")
+	}
+
+	for {
+		select {
+		case res = <-ch1:
+			err = nil
+			break
+		case <- time.After(timeout):
+			err = nil
+			break
+		default:
+		}
+	}
+
+	return res, err
+}
+
+
+func SelectSendWithTimeout(data interface{}, ch interface{}, timeout time.Duration) (err error) {
+	ch1, ok := ch.(chan interface{})
+	if !ok {
+		return errors.New("ch not chan")
+	}
+
+	for {
+		select {
+		case ch1 <- data:
+			err = nil
+			break
+		case <- time.After(timeout):
+			err = nil
+			break
+		default:
+		}
+	}
+
+	return err
+}
+

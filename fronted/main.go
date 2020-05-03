@@ -37,13 +37,6 @@ func main() {
 	Consul, err := common.NewConsulClient(config, cache)
 	fmt.Println("new consul", err)
 
-	//一直watch consul上的service
-	//todo watch中修改全局的pool
-	//serviceNameList := Consul.Config.GetServiceNameList()
-	//for _, serviceName := range serviceNameList {
-	//	go Consul.WatchServiceByName(serviceName)
-	//}
-
 	//取consul上redis service的配置
 	redisClusterClient, err := common.NewRedisClusterClient(Consul)
 	mysqlPoolUser, err := common.NewMysqlPoolUser(Consul)

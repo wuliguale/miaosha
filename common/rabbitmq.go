@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/streadway/amqp"
 	"io"
-	"strconv"
 )
 
 
@@ -15,35 +14,18 @@ type RabbitmqPool struct {
 
 func NewRabbitmqPool(consul *ConsulClient) (rabbitmqPool *RabbitmqPool, err error) {
 	serviceName := "miaosha-demo-rabbitmq"
-	serviceInfoList, err := consul.GetServiceListByName(serviceName)
-	if err != nil {
-		return nil, err
-	}
+	serviceChan := consul.ChanList[serviceName]
 
-	var addressList []map[string]string
-	for _,serviceInfo := range serviceInfoList.List {
-		address := map[string]string{
-			"host" : serviceInfo.Host,
-			"port" : strconv.Itoa(serviceInfo.Port),
-			"user" : "root",
-			"password" : "root",
-		}
-
-		addressList = append(addressList, address)
-	}
-
-	fmt.Println(addressList)
-
-	makeFunc := func(address map[string]string) (io.Closer, error) {
+	makeFunc := func(serviceInfo *ConsulServiceInfo) (io.Closer, error) {
 		//*amqp.Connection
 		//return amqp.Dial("amqp://root:root@172.18.0.99:5672/")
-		url := fmt.Sprintf("amqp://%s:%s@%s:%s/", address["user"], address["password"], address["host"], address["port"])
+		url := fmt.Sprintf("amqp://%s:%s@%s:%d/", "root", "root", serviceInfo.Host, serviceInfo.Port)
 		fmt.Println(url)
 		return amqp.Dial(url)
 	}
 
 	//TODO get from consul kv
-	poolConfig, err := NewPoolConfig(1, 3, 3600, addressList, 0, makeFunc, nil)
+	poolConfig, err := NewPoolConfig(1, 3, 3600, serviceChan, makeFunc, nil)
 	pool, err :=  NewPool(poolConfig)
 
 	rabbitmqPool = &RabbitmqPool{pool}

@@ -22,26 +22,42 @@ func NewPool(config *PoolConfig) (*Pool, error) {
 		config : config,
 	}
 
-	for i := 0; i < config.initCap; i++ {
+	err := pool.InitPool()
+
+	return pool, err
+}
+
+
+func (pool *Pool) InitPool() (err error) {
+	pool.ClosePool()
+	pool.channel = make(chan *PoolConn, pool.config.maxCap)
+
+	for i := 0; i < pool.config.initCap; i++ {
 		fmt.Println("newpool for ", i)
 
 		poolConn, err := pool.makeConn()
 
 		if err != nil {
 			pool.ClosePool()
-			return nil, err
+			return err
 		}
 
 		poolConn.updateIdleStartTime()
 		pool.channel <- poolConn
 	}
 
-	return pool, nil
+	return nil
 }
 
+
+
 func (pool *Pool) makeConn() (poolConn *PoolConn, err error) {
-	address := pool.config.GetAddress()
-	conn, err := pool.config.makeFunc(address)
+	serviceInfo, err := pool.config.GetServiceInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := pool.config.makeFunc(serviceInfo)
 
 	if err != nil {
 		return nil, err
@@ -60,6 +76,16 @@ func (pool *Pool) Get() (closer io.Closer, err error) {
 
 	if channel == nil {
 		return nil, errors.New("pool channel empty")
+	}
+
+	//serviceInfoList is fast than pool.channel, update pool.channel
+	if pool.config.serviceFast {
+		err = pool.InitPool()
+		if err != nil {
+			return nil, err
+		}
+
+		pool.config.serviceFast = false
 	}
 
 	poolConn := &PoolConn{}
@@ -151,51 +177,67 @@ func (pool *Pool) CloseConn(closer io.Closer) error {
 	return closer.Close()
 }
 
-type PoolMakeFunc func(map[string]string) (io.Closer, error)
+type PoolMakeFunc func(serviceInfo *ConsulServiceInfo) (io.Closer, error)
 type PoolValidateFunc func(io.Closer) bool
 
 type PoolConfig struct {
 	initCap int
 	maxCap int
 	maxIdleSeconds int64
-	addressList []map[string]string
-	addressIndex int
+	serviceList *ConsulServiceInfoList
+	serviceFast bool
 	makeFunc PoolMakeFunc
 	validateFunc PoolValidateFunc
 	mu sync.RWMutex
 }
 
 
-func NewPoolConfig(initCap, maxCap int, maxIdleSeconds int64, addressList []map[string]string, addressIndex int, makeFunc PoolMakeFunc, validateFunc PoolValidateFunc) (config *PoolConfig, err error) {
+func NewPoolConfig(initCap, maxCap int, maxIdleSeconds int64, serviceChan chan *ConsulServiceInfoList, makeFunc PoolMakeFunc, validateFunc PoolValidateFunc) (config *PoolConfig, err error) {
 	if initCap < 0 || maxCap <= 0 || initCap > maxCap || maxIdleSeconds <= 0{
 		return nil, errors.New("invalid pool config")
+	}
+
+	serviceInfoListInterface, err := SelectReceiveWithTimeout(serviceChan, 2)
+	if err != nil {
+		return nil, errors.New("pool get serviceInfoList from ch fail")
+	}
+	serviceInfoList, ok := serviceInfoListInterface.(*ConsulServiceInfoList)
+	if !ok {
+		return nil, errors.New("pool serviceInfoListInterface assert fail")
 	}
 
 	config = &PoolConfig{
 		initCap:initCap,
 		maxCap:maxCap,
 		maxIdleSeconds:maxIdleSeconds,
-		addressList:addressList,
-		addressIndex:addressIndex,
+		serviceList:serviceInfoList,
+		serviceFast:false,
 		makeFunc:makeFunc,
 		validateFunc:validateFunc,
 	}
+
+	//update config service from serviceChan
+	go func() {
+		for {
+			serviceInfoList2 , ok := <- serviceChan
+			if !ok {
+				//chan closed
+				break
+			}
+
+			config.serviceList = serviceInfoList2
+			config.serviceFast = true
+
+			fmt.Println("serviceInfoList fast")
+		}
+	}()
 
 	return config, nil
 }
 
 
-func (config *PoolConfig) GetAddress() (address map[string]string) {
-	address = map[string]string{}
-
-	len := len(config.addressList)
-	if len > 0 {
-		next := (config.addressIndex + 1) % len
-		address = config.addressList[next]
-		config.addressIndex = next
-	}
-
-	return address
+func (config *PoolConfig) GetServiceInfo() (serviceInfo *ConsulServiceInfo, err error) {
+	return config.serviceList.GetNext()
 }
 
 
