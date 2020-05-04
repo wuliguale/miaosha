@@ -57,7 +57,7 @@ func (redisPool RedisPool) Close(conn redis2.Conn) error {
 }
 
 
-func NewRedisPool() (redisPool RedisPool, err error) {
+func NewRedisPool() (redisPool *RedisPool, err error) {
 	serviceInfo := &ConsulServiceInfo{
 		Id:"1",
 		Name:"redis-test",
@@ -91,9 +91,15 @@ func NewRedisPool() (redisPool RedisPool, err error) {
 	}
 
 	poolConfig, err := NewPoolConfig(3, 5, 60, serviceChan, makeFunc, validateFunc)
+	if err != nil {
+		return nil, err
+	}
 	pool, err :=  NewPool(poolConfig)
+	if err != nil {
+		return nil, err
+	}
 
-	redisPool = RedisPool{pool}
+	redisPool = &RedisPool{pool}
 	return redisPool, err
 }
 

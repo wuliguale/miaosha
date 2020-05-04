@@ -1,6 +1,7 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"github.com/streadway/amqp"
 	"io"
@@ -14,7 +15,10 @@ type RabbitmqPool struct {
 
 func NewRabbitmqPool(consul *ConsulClient) (rabbitmqPool *RabbitmqPool, err error) {
 	serviceName := "miaosha-demo-rabbitmq"
-	serviceChan := consul.ChanList[serviceName]
+	serviceChan, ok := consul.ChanList[serviceName]
+	if !ok {
+		return nil, errors.New("get service chan from chanList fail")
+	}
 
 	makeFunc := func(serviceInfo *ConsulServiceInfo) (io.Closer, error) {
 		//*amqp.Connection
@@ -26,7 +30,13 @@ func NewRabbitmqPool(consul *ConsulClient) (rabbitmqPool *RabbitmqPool, err erro
 
 	//TODO get from consul kv
 	poolConfig, err := NewPoolConfig(1, 3, 3600, serviceChan, makeFunc, nil)
+	if err != nil {
+		return nil, err
+	}
 	pool, err :=  NewPool(poolConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	rabbitmqPool = &RabbitmqPool{pool}
 	return rabbitmqPool, err

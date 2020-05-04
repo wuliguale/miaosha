@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"io"
@@ -48,7 +49,10 @@ func NewRpcUser (consul *common.ConsulClient) (rpcUser *RpcUser, err error) {
 
 func NewTransportPool(consul *common.ConsulClient) (pool *common.Pool, err error) {
 	serviceName := "miaosha-demo-rpc-user"
-	serviceChan := consul.ChanList[serviceName]
+	serviceChan, ok := consul.ChanList[serviceName]
+	if !ok {
+		return nil, errors.New("get service chan from chanList fail")
+	}
 
 	makeFunc := func(serviceInfo *common.ConsulServiceInfo) (io.Closer, error) {
 		addr := fmt.Sprintf("%s:%d", serviceInfo.Host, serviceInfo.Port)
@@ -69,6 +73,10 @@ func NewTransportPool(consul *common.ConsulClient) (pool *common.Pool, err error
 	}
 
 	poolConfig, err := common.NewPoolConfig(1, 2, 3, serviceChan, makeFunc, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	return  common.NewPool(poolConfig)
 }
 

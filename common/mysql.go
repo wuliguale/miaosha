@@ -1,6 +1,7 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -24,7 +25,10 @@ type MysqlPool struct {
 
 func NewMysqlPool(consul *ConsulClient, dbName string) (mysqlPool *MysqlPool, err error) {
 	serviceName := "miaosha-demo-proxysql"
-	serviceChan := consul.ChanList[serviceName]
+	serviceChan, ok := consul.ChanList[serviceName]
+	if !ok {
+		return nil, errors.New("get service chan from chanList fail")
+	}
 
 	makeFunc := func(serviceInfo *ConsulServiceInfo) (io.Closer, error) {
 		//*gorm.DB
@@ -47,7 +51,14 @@ func NewMysqlPool(consul *ConsulClient, dbName string) (mysqlPool *MysqlPool, er
 
 	//TODO get from consul kv
 	poolConfig, err := NewPoolConfig(6, 10, 3600, serviceChan, makeFunc, validateFunc)
+	if err != nil {
+		return nil, err
+	}
+
 	pool, err :=  NewPool(poolConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	mysqlPool = &MysqlPool{pool}
 	return mysqlPool, err
