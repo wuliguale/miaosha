@@ -5,25 +5,32 @@ localhost:8001是kong的admin api地址
 
 //添加upstream
 curl -X POST http://localhost:8001/upstreams -d "name=miaosha-demo-upstream"
+curl http://localhost:8001/upstreams
 
 //upstream添加target
-curl -X POST http://localhost:8001/upstreams/miaosha-demo-upstream/targets -d "target=192.168.125.2:8082"
+curl -X POST http://localhost:8001/upstreams/miaosha-demo-upstream/targets -d "target=172.18.0.1:8082"
+curl http://localhost:8001/upstreams/miaosha-demo-upstream/targets/all/
 
 //添加service
 curl -X POST http://localhost:8001/services -d "name=miaosha-demo-service" -d "host=miaosha-demo-upstream"
+curl http://localhost:8001/services
 
 //添加route，strip_path=false转发时不去掉匹配的path部分
-curl -X POST http://localhost:8001/services/miaosha-demo-service/routes -d "hosts[]=localhost:8001" -d "paths[]=/product/order" -d "name=miaosha-demo-route" -d "strip_path=false"
-
+curl -X POST http://localhost:8001/services/miaosha-demo-service/routes -d "paths[]=/product/order" -d "name=miaosha-demo-route" -d "strip_path=false"
+curl http://localhost:8001/routes
 
 1.使用jwt插件实现权限验证
 //在service上启用jwt插件，并检查 claims中的nbf字段，exp,nbf只能有一个
 curl -X POST http://localhost:8001/services/miaosha-demo-service/plugins -d "name=jwt"  -d "config.claims_to_verify=nbf"
+curl http://localhost:8001/plugins/enabled
 
 //添加consumer
 curl -X POST http://localhost:8001/consumers -d "username=miaosha-demo-consumer&custom_id=miaosha-demo-custom_id"
 //consumer设置secret
 curl -X POST http://localhost:8001/consumers/miaosha-demo-consumer/jwt -d "secret=miaosha-demo-jwt-secret"
+
+curl http://localhost:8001/consumers
+
 拿到consumer的key
 curl http://localhost:8001/consumers/miaosha-demo-consumer/jwt
 
@@ -36,5 +43,5 @@ curl http://localhost:8000/product/order?jwt=xxxxx
 在miaosha-demo-service上限流，使用redis存储流量统计数据，按ip限流，每秒每个ip 1次
  curl -X POST http://localhost:8001/services/miaosha-demo-service/plugins -d "name=rate-limiting" \
  -d "config.second=1" -d "config.limit_by=ip" \
- -d "config.policy=redis" -d "config.redis_host=192.168.125.128" -d "config.redis_port=6379"
+ -d "config.policy=redis" -d "config.redis_host=172.18.0.1" -d "config.redis_port=6379"
 

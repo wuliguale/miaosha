@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
+	"log"
 	"miaosha-demo/common"
 	"miaosha-demo/fronted/web/controllers"
 	"miaosha-demo/repositories"
@@ -31,26 +31,50 @@ func main() {
 	defer cancel()
 
 	config, err := common.NewConfigConsul()
-	fmt.Println("new config,", err)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	cache := common.NewFreeCacheClient(20)
 
 	Consul, err := common.NewConsulClient(config, cache)
-	fmt.Println("new consul", err)
-
-	//一直watch consul上的service
-	//todo watch中修改全局的pool
-	serviceNameList := Consul.Config.GetServiceNameList()
-	for _, serviceName := range serviceNameList {
-		go Consul.WatchServiceByName(serviceName)
+	if err != nil {
+		log.Println(err)
+		return
 	}
 
 	//取consul上redis service的配置
 	redisClusterClient, err := common.NewRedisClusterClient(Consul)
-	mysqlPool, err := common.NewMysqlPool(Consul)
-	rabbitmqPool, err := common.NewRabbitmqPool(Consul)
-	rpcUser, err := user.NewRpcUser(Consul)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
-	userRepository := repositories.NewUserRepository(mysqlPool)
+	mysqlPoolUser, err := common.NewMysqlPoolUser(Consul)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	mysqlPoolProduct, err := common.NewMysqlPoolProduct(Consul)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	rabbitmqPool, err := common.NewRabbitmqPool(Consul)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	rpcUser, err := user.NewRpcUser(Consul)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	userRepository := repositories.NewUserRepository(mysqlPoolUser)
 	userService := services.NewUserService(userRepository)
 
 	//首页
@@ -62,7 +86,7 @@ func main() {
 	index := mvc.New(indexParty)
 	index.Handle(new(controllers.IndexController))
 
-	productRepository := repositories.NewProductRepository(mysqlPool)
+	productRepository := repositories.NewProductRepository(mysqlPoolProduct)
 	productService := services.NewProductService(productRepository)
 	productParty := app.Party("/product")
 	product := mvc.New(productParty)

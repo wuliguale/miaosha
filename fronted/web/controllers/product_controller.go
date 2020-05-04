@@ -12,6 +12,7 @@ import (
 	"miaosha-demo/common"
 	"miaosha-demo/services"
 	"strconv"
+	"time"
 )
 
 type ProductController struct {
@@ -43,18 +44,18 @@ func (p *ProductController) GetAll() mvc.View{
 
 	for k,v := range productListMap {
 		pidStr := fmt.Sprintf("%v", v["Id"])
-
-		jwtClaims := jwt.MapClaims{"uid" : uidStr, "pid" : pidStr, "nbf" : 1584273600}
+		//TODO	get nbf from product
+		jwtClaims := jwt.MapClaims{"uid" : uidStr, "pid" : pidStr, "nbf" : time.Now().Unix() - 10}
 
 		jwtStr, err := common.JwtSign(jwtClaims)
 		if err != nil {
 			return errorReturnView(p.Ctx, err.Error(), "/", 500)
 		}
-
+		
 		v["UrlDetail"] = "/product/one?id=" + pidStr
 
 		//秒杀接口使用单独的域名，不和商品页面使用同一个域名
-		v["UrlOrder"] = "http://192.168.125.128:8000/product/order?jwt=" + jwtStr
+		v["UrlOrder"] = "http://121.36.61.156:8000/product/order?jwt=" + jwtStr
 		productListMap[k] = v
 	}
 
@@ -89,10 +90,64 @@ func (p *ProductController) GetOne() mvc.View{
 }
 
 
+func (p *ProductController) GetRedisInit() {
+	pid, err := p.Ctx.URLParamInt("pid")
+	if err != nil {
+		fmt.Println(pid)
+		return
+	}
+
+	product, err := p.ProductService.GetProductByID(uint64(pid))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	num := product.Num
+	redisKey := fmt.Sprintf("pid_num_%d", pid)
+	if num > 0 {
+		p.RedisClusterClient.Set(redisKey, num, time.Hour * 24)
+	}
+
+	cacheRes, err := p.RedisClusterClient.Get(redisKey).Int()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("get cache: ", cacheRes)
+}
+
+
 //秒杀接口，从kong负载均衡过来
 func (p *ProductController) GetOrder() {
-	pid := p.Ctx.URLParamInt64Default("pid", 0)
-	uid, err := services.GetUidFromCookie(p.Ctx)
+	jwtStr := p.Ctx.URLParam("jwt")
+	jwtMap, err := common.JwtParse(jwtStr)
+
+	if err != nil {
+		ReturnJsonFail(p.Ctx, "jwt错误")
+		return
+	}
+
+	fmt.Println(jwtMap)
+
+	pidStr := jwtMap["pid"].(string)
+	uidStr := jwtMap["uid"].(string)
+
+	pidInt, err := strconv.Atoi(pidStr)
+	if err != nil {
+		ReturnJsonFail(p.Ctx, "参数错误")
+		return
+	}
+	uidInt, err := strconv.Atoi(uidStr)
+	if err != nil {
+		ReturnJsonFail(p.Ctx, "参数错误")
+		return
+	}
+
+	pid := int64(pidInt)
+	uid := int64(uidInt)
+
 	if pid == 0 || uid == 0 || err != nil {
 		ReturnJsonFail(p.Ctx, "参数错误")
 		return

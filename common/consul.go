@@ -85,6 +85,7 @@ func (list *ConsulServiceInfoList) GetNext() (serviceInfo *ConsulServiceInfo, er
 
 	list.Lock()
 	serviceInfo = list.List[list.Next]
+	list.Next = (list.Next + 1) % len(list.List)
 	list.Unlock()
 
 	return serviceInfo, nil
@@ -96,9 +97,11 @@ type ConsulClient struct {
 	*api.Client
 	Config *ConfigConsul
 	Cache *FreeCacheClient
+	//serviceName:ServiceInfoList
+	ChanList map[string]chan *ConsulServiceInfoList
 }
 
-func NewConsulClient(configConsul *ConfigConsul, freeCache *FreeCacheClient) (c *ConsulClient, err error) {
+func NewConsulClient(configConsul *ConfigConsul, freeCache *FreeCacheClient) (consul *ConsulClient, err error) {
 	config := api.DefaultConfig()
 
 	//从配置文件取，agent的负载均衡地址
@@ -110,7 +113,19 @@ func NewConsulClient(configConsul *ConfigConsul, freeCache *FreeCacheClient) (c 
 	if err != nil {
 		return nil, err
 	} else {
-		return &ConsulClient{client, configConsul, freeCache}, nil
+		ChanList := map[string]chan *ConsulServiceInfoList{}
+		consul = &ConsulClient{client, configConsul, freeCache, ChanList}
+
+		//一直watch consul上的service
+		serviceNameList := configConsul.GetServiceNameList()
+		for _, serviceName := range serviceNameList {
+			//chan只保留最新的serviceInfoList
+			consul.ChanList[serviceName] = make(chan *ConsulServiceInfoList, 1)
+
+			go consul.WatchServiceByName(serviceName)
+		}
+
+		return consul, nil
 	}
 }
 
@@ -208,14 +223,17 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 			log.Println("service watch error: ", err)
 		}
 
-		log.Println(metaInfo.LastIndex, len(serviceList), err)
+		//log.Println(serviceName, lastIndex, metaInfo.LastIndex, len(serviceList), err)
 
 		//数据有变化才写入，避免频繁写入，如果cache过期可以在get时加入，不需要watch时一直写
 		if lastIndex != metaInfo.LastIndex{
-			//todo	 use callback update redis connection
 			//有数据
 			if len(serviceList) >= 0 {
 				serviceInfoList := client.FormatApiServiceList2ServiceInfoList(serviceName, serviceList)
+
+				//将服务的最新数据写入服务的chan，以便服务使用这更新
+				client.SendServiceInfoList2Chan(serviceName, serviceInfoList)
+
 				err = client.CacheServiceInfoList(serviceInfoList)
 				if err != nil {
 					log.Println("cache serviceInfoList fail ", err)
@@ -231,6 +249,30 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 		}
 	}
 }
+
+
+func (client *ConsulClient) SendServiceInfoList2Chan(serviceName string, serviceInfoList *ConsulServiceInfoList) (err error) {
+	err = errors.New("send serviceInfoList to chan fail")
+
+	//clear chan
+	select {
+	case <- client.ChanList[serviceName]:
+	default:
+	}
+
+	log.Println("consul send serviceInfoList to chan2", serviceName)
+
+	select {
+	case client.ChanList[serviceName] <- serviceInfoList:
+		fmt.Println("consul send serviceInfoList to chan succ")
+		err = nil
+	case <- time.After(1 * time.Second):
+		fmt.Println("consul send serviceInfoList to chan timeout")
+	}
+
+	return err
+}
+
 
 
 //将从consul获取的service列表转换为ServiceInfoList

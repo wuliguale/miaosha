@@ -87,9 +87,9 @@ func main() {
 	}
 
 	//本机的指定端口
-	//localIp := *flagIp
+	localIp := *flagIp
 	localPort := *flagPort
-	addr := fmt.Sprintf("127.0.0.1:%d", localPort)
+	addr := fmt.Sprintf("%s:%d", localIp, localPort)
 	log.Println("listen: ", addr)
 
 	//1. protocolFactory
@@ -105,16 +105,26 @@ func main() {
 	}
 
 	config, err := common.NewConfigConsul()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	freeCache := common.NewFreeCacheClient(5)
 	consulClient, err := common.NewConsulClient(config, freeCache)
-
-	mysqlPool, err := common.NewMysqlPool(consulClient)
 	if err != nil {
+		log.Println(err)
+		return
+	}
 
+	mysqlPoolUser, err := common.NewMysqlPoolUser(consulClient)
+	if err != nil {
+		log.Println(err)
+		return
 	}
 
 	//4. xxxHandler
-	handler, err := NewUserServiceHandler(mysqlPool)
+	handler, err := NewUserServiceHandler(mysqlPoolUser)
 	if err != nil {
 		log.Fatalln("new userServiceHandler fail: ", err)
 	}

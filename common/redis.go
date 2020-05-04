@@ -57,16 +57,22 @@ func (redisPool RedisPool) Close(conn redis2.Conn) error {
 }
 
 
-func NewRedisPool() (redisPool RedisPool, err error) {
-	addressList := []map[string]string{
-		{
-			"host" : "121.36.61.156",
-			"port" : "6379",
-		},
+func NewRedisPool() (redisPool *RedisPool, err error) {
+	serviceInfo := &ConsulServiceInfo{
+		Id:"1",
+		Name:"redis-test",
+		Host:"121.36.61.156",
+		Port:6379,
 	}
 
-	makeFunc := func(address map[string]string) (io.Closer, error) {
-		url := fmt.Sprintf("%s:%s", address["host"], address["port"])
+	serviceInfoList := &ConsulServiceInfoList{Name:"redis-test"}
+	serviceInfoList.Add(serviceInfo)
+
+	serviceChan := make(chan *ConsulServiceInfoList, 1)
+	serviceChan <- serviceInfoList
+
+	makeFunc := func(serviceInfo *ConsulServiceInfo) (io.Closer, error) {
+		url := fmt.Sprintf("%s:%d", serviceInfo.Host, serviceInfo.Port)
 		return redis2.Dial("tcp", url)
 	}
 
@@ -84,10 +90,16 @@ func NewRedisPool() (redisPool RedisPool, err error) {
 		}
 	}
 
-	poolConfig, err := NewPoolConfig(3, 5, 60, addressList, 0, makeFunc, validateFunc)
+	poolConfig, err := NewPoolConfig(3, 5, 60, serviceChan, makeFunc, validateFunc)
+	if err != nil {
+		return nil, err
+	}
 	pool, err :=  NewPool(poolConfig)
+	if err != nil {
+		return nil, err
+	}
 
-	redisPool = RedisPool{pool}
+	redisPool = &RedisPool{pool}
 	return redisPool, err
 }
 

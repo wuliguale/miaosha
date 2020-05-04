@@ -14,13 +14,30 @@ import (
 
 func main() {
 	config, err := common.NewConfigConsul()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	freeCache := common.NewFreeCacheClient(10)
 	consulClient, err := common.NewConsulClient(config, freeCache)
+	if err != nil {
+		log.Println(err)
+	}
 
 	//连接db
-	mysqlPool, err := common.NewMysqlPool(consulClient)
+	mysqlPoolProduct, err := common.NewMysqlPoolProduct(consulClient)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	rabbitmqPool, err := common.NewRabbitmqPool(consulClient)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	conn, err := rabbitmqPool.Get()
 	//conn, err := amqp.Dial("amqp://root:root@172.18.0.99/:5672/")
 	common.FailOnError(err, "Failed to connect to RabbitMQ")
@@ -154,7 +171,7 @@ func main() {
 
 	go func() {
 		for d := range msgs {
-			orderRepository := repositories.NewOrderRepository(mysqlPool)
+			orderRepository := repositories.NewOrderRepository(mysqlPoolProduct)
 			orderService := services.NewOrderService(orderRepository)
 
 			uidPidSlice := strings.Split(string(d.Body), "_")

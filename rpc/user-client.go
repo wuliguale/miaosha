@@ -2,13 +2,13 @@ package user
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"io"
 	"miaosha-demo/common"
 	"miaosha-demo/rpc/gen-go/user"
 	"reflect"
-	"strconv"
 )
 
 //rpc UserService的客户端
@@ -49,25 +49,13 @@ func NewRpcUser (consul *common.ConsulClient) (rpcUser *RpcUser, err error) {
 
 func NewTransportPool(consul *common.ConsulClient) (pool *common.Pool, err error) {
 	serviceName := "miaosha-demo-rpc-user"
-	serviceInfoList, err := consul.GetServiceListByName(serviceName)
-	if err != nil {
-		return nil, err
+	serviceChan, ok := consul.ChanList[serviceName]
+	if !ok {
+		return nil, errors.New("get service chan from chanList fail")
 	}
 
-	var addressList []map[string]string
-	for _,serviceInfo := range serviceInfoList.List {
-		address := map[string]string{
-			"host" : serviceInfo.Host,
-			"port" : strconv.Itoa(serviceInfo.Port),
-		}
-
-		addressList = append(addressList, address)
-	}
-
-	fmt.Println(addressList)
-
-	makeFunc := func(address map[string]string) (io.Closer, error) {
-		addr := fmt.Sprintf("%s:%d", address["host"], address["port"])
+	makeFunc := func(serviceInfo *common.ConsulServiceInfo) (io.Closer, error) {
+		addr := fmt.Sprintf("%s:%d", serviceInfo.Host, serviceInfo.Port)
 		transportFactory := thrift.NewTTransportFactory()
 
 		//TSocket实现了TTransport接口
@@ -84,7 +72,11 @@ func NewTransportPool(consul *common.ConsulClient) (pool *common.Pool, err error
 		return transport, nil
 	}
 
-	poolConfig, err := common.NewPoolConfig(1, 2, 3, addressList, 0, makeFunc, nil)
+	poolConfig, err := common.NewPoolConfig(1, 2, 3, serviceChan, makeFunc, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	return  common.NewPool(poolConfig)
 }
 
@@ -94,6 +86,8 @@ func (rpcUser *RpcUser) Call(method string, vals ...string) (userStruct *user.Us
 	fmt.Println(err)
 
 	transport, ok := closer.(thrift.TTransport)
+	defer rpcUser.transportPool.Put(transport)
+
 	if !ok {
 
 	}
@@ -108,12 +102,16 @@ func (rpcUser *RpcUser) Call(method string, vals ...string) (userStruct *user.Us
 	for _, v := range vals {
 		in = append(in, reflect.ValueOf(v))
 	}
-	abc := reflect.ValueOf(client).MethodByName(method).Call(in)
-	userStruct = abc[0].Interface().(*user.UserStruct)
-	//return client.Reg(defaultCtx, userName, nickName, password)
 
-	rpcUser.transportPool.Put(transport)
+	//client.Reg(defaultCtx, userName, nickName, password)
+	res := reflect.ValueOf(client).MethodByName(method).Call(in)
+	
+	if res[1].Interface() != nil {
+		return nil, res[1].Interface().(error)
+	}
 
+	//res返回的是method的返回值的slice
+	userStruct = res[0].Interface().(*user.UserStruct)
 	return userStruct, nil
 }
 

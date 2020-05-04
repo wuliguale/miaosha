@@ -1,43 +1,37 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"io"
-	"strconv"
 )
+
+
+func NewMysqlPoolUser(consul *ConsulClient) (mysqlPool *MysqlPool, err error) {
+	return NewMysqlPool(consul, "miaosha-demo-proxysql-user", "miaosha-user")
+}
+
+
+func NewMysqlPoolProduct(consul *ConsulClient) (mysqlPool *MysqlPool, err error) {
+	return NewMysqlPool(consul, "miaosha-demo-proxysql-product", "miaosha-product")
+}
 
 
 type MysqlPool struct {
 	pool *Pool
 }
 
-func NewMysqlPool(consul *ConsulClient) (mysqlPool *MysqlPool, err error) {
-	serviceName := "miaosha-demo-proxysql"
-	serviceInfoList, err := consul.GetServiceListByName(serviceName)
-	if err != nil {
-		return nil, err
+func NewMysqlPool(consul *ConsulClient, serviceName, dbName string) (mysqlPool *MysqlPool, err error) {
+	serviceChan, ok := consul.ChanList[serviceName]
+	if !ok {
+		return nil, errors.New("get service chan from chanList fail")
 	}
 
-	var addressList []map[string]string
-	for _,serviceInfo := range serviceInfoList.List {
-		address := map[string]string{
-			"host" : serviceInfo.Host,
-			"port" : strconv.Itoa(serviceInfo.Port),
-			"user" : "user1",
-			"password" : "password1",
-			"db" : "miaosha-product",
-		}
-
-		addressList = append(addressList, address)
-	}
-
-	fmt.Println(addressList)
-
-	makeFunc := func(address map[string]string) (io.Closer, error) {
+	makeFunc := func(serviceInfo *ConsulServiceInfo) (io.Closer, error) {
 		//*gorm.DB
-		dsn := fmt.Sprintf("%s:%s@(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", address["user"], address["password"], address["host"], address["port"], address["db"])
+		dsn := fmt.Sprintf("%s:%s@(%s:%d)/%s?charset=utf8&parseTime=True&loc=Local", "user1", "password1", serviceInfo.Host, serviceInfo.Port, dbName)
 		//return gorm.Open("mysql", "root:root@(192.168.125.128:3306)/miaosha?charset=utf8&parseTime=True&loc=Local")
 		return gorm.Open("mysql", dsn)
 	}
@@ -55,8 +49,15 @@ func NewMysqlPool(consul *ConsulClient) (mysqlPool *MysqlPool, err error) {
 	}
 
 	//TODO get from consul kv
-	poolConfig, err := NewPoolConfig(6, 10, 3600, addressList, 0, makeFunc, validateFunc)
+	poolConfig, err := NewPoolConfig(6, 10, 3600, serviceChan, makeFunc, validateFunc)
+	if err != nil {
+		return nil, err
+	}
+
 	pool, err :=  NewPool(poolConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	mysqlPool = &MysqlPool{pool}
 	return mysqlPool, err
