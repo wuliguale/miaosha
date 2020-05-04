@@ -29,8 +29,20 @@ func NewPool(config *PoolConfig) (*Pool, error) {
 
 
 func (pool *Pool) InitPool() (err error) {
-	for poolConn := range pool.channel {
-		pool.CloseConn(poolConn)
+	//clear chan and close conn
+	for {
+		isBreak := false
+
+		select {
+		case poolConn := <- pool.channel:
+			pool.CloseConn(poolConn)
+		default:
+			isBreak = true
+		}
+
+		if isBreak {
+			break
+		}
 	}
 
 	for i := 0; i < pool.config.initCap; i++ {

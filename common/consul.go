@@ -223,7 +223,7 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 			log.Println("service watch error: ", err)
 		}
 
-		log.Println(serviceName, lastIndex, metaInfo.LastIndex, len(serviceList), err)
+		//log.Println(serviceName, lastIndex, metaInfo.LastIndex, len(serviceList), err)
 
 		//数据有变化才写入，避免频繁写入，如果cache过期可以在get时加入，不需要watch时一直写
 		if lastIndex != metaInfo.LastIndex{
