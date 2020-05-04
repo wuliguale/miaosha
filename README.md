@@ -89,7 +89,7 @@ services/<br>
 
 
 ## 三、架构图
-[miaosha-demo图](http://file.chunyujingchun.com/bhl/158859868393370.png)
+[miaosha-demo图](https://app.yinxiang.com/shard/s48/nl/27140383/2bca25da-bd09-428e-9d59-65b0b87158d7)
 
 
 
