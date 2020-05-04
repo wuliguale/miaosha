@@ -252,14 +252,12 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 
 
 func (client *ConsulClient) SendServiceInfoList2Chan(serviceName string, serviceInfoList *ConsulServiceInfoList) (err error) {
-	log.Println("consul send serviceInfoList to chan", serviceName)
-
 	err = errors.New("send serviceInfoList to chan fail")
 
 	//clear chan
-	for serviceInfoListOld := range client.ChanList[serviceName] {
-		fmt.Println(serviceInfoListOld)
-		fmt.Println("clear chan")
+	select {
+	case <- client.ChanList[serviceName]:
+	default:
 	}
 
 	log.Println("consul send serviceInfoList to chan2", serviceName)
@@ -268,12 +266,10 @@ func (client *ConsulClient) SendServiceInfoList2Chan(serviceName string, service
 	case client.ChanList[serviceName] <- serviceInfoList:
 		fmt.Println("consul send serviceInfoList to chan succ")
 		err = nil
-	case <- time.After(2 * time.Second):
+	case <- time.After(1 * time.Second):
 		fmt.Println("consul send serviceInfoList to chan timeout")
 	}
 
-	log.Println("consul send serviceInfoList to chan3", serviceName)
-	
 	return err
 }
 

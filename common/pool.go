@@ -224,9 +224,6 @@ func NewPoolConfig(initCap, maxCap int, maxIdleSeconds int64, serviceChan chan *
 	//update config service from serviceChan
 	go func() {
 		for {
-			//TODO remove test
-			time.Sleep(time.Second * 1)
-
 			serviceInfoList2 , ok := <- serviceChan
 			if !ok {
 				//chan closed
@@ -237,6 +234,7 @@ func NewPoolConfig(initCap, maxCap int, maxIdleSeconds int64, serviceChan chan *
 			config.serviceFast = true
 
 			fmt.Println("serviceInfoList fast")
+			time.Sleep(time.Second * 1)
 		}
 	}()
 
