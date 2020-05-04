@@ -2,8 +2,19 @@
   "host" : "121.36.61.156",
   "port" : 8500,
   "services" : {
-    "miaosha-demo-proxysql" :{
-      "name" : "miaosha-demo-proxysql",
+    "miaosha-demo-proxysql-user" :{
+      "name" : "miaosha-demo-proxysql-user",
+      "tags" : ["miaosha-demo"],
+      "wait_seconds" : 9,
+      "sleep_seconds" : 5,
+      "check_ttl_seconds" : 10,
+      "check_real_seconds" : 8,
+      "check_output" : "miaosha-demo check output",
+      "cache_key" : "consul-proxysql",
+      "cache_seconds" : 30
+    },
+    "miaosha-demo-proxysql-product" :{
+      "name" : "miaosha-demo-proxysql-product",
       "tags" : ["miaosha-demo"],
       "wait_seconds" : 9,
       "sleep_seconds" : 5,

@@ -10,12 +10,12 @@ import (
 
 
 func NewMysqlPoolUser(consul *ConsulClient) (mysqlPool *MysqlPool, err error) {
-	return NewMysqlPool(consul, "miaosha-user")
+	return NewMysqlPool(consul, "miaosha-demo-proxysql-user", "miaosha-user")
 }
 
 
 func NewMysqlPoolProduct(consul *ConsulClient) (mysqlPool *MysqlPool, err error) {
-	return NewMysqlPool(consul, "miaosha-product")
+	return NewMysqlPool(consul, "miaosha-demo-proxysql-product", "miaosha-product")
 }
 
 
@@ -23,8 +23,7 @@ type MysqlPool struct {
 	pool *Pool
 }
 
-func NewMysqlPool(consul *ConsulClient, dbName string) (mysqlPool *MysqlPool, err error) {
-	serviceName := "miaosha-demo-proxysql"
+func NewMysqlPool(consul *ConsulClient, serviceName, dbName string) (mysqlPool *MysqlPool, err error) {
 	serviceChan, ok := consul.ChanList[serviceName]
 	if !ok {
 		return nil, errors.New("get service chan from chanList fail")
