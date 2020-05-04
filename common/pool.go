@@ -198,13 +198,19 @@ func NewPoolConfig(initCap, maxCap int, maxIdleSeconds int64, serviceChan chan *
 		return nil, errors.New("invalid pool config")
 	}
 
-	serviceInfoList , ok := <- serviceChan
-	if !ok {
-		//chan closed
-		return nil, errors.New("pool get serviceInfoList from ch fail")
+	var serviceInfoList *ConsulServiceInfoList
+
+	select {
+	case serviceInfoList2, ok := <- serviceChan:
+		if !ok {
+			//chan closed
+			return nil, errors.New("pool get serviceInfoList from ch close")
+		}
+		serviceInfoList = serviceInfoList2
+	case <-time.After(time.Second * 2):
+		return nil, errors.New("pool get serviceInfoList from ch timeout")
 	}
-	fmt.Println(serviceInfoList)
-	
+
 	config = &PoolConfig{
 		initCap:initCap,
 		maxCap:maxCap,
@@ -218,6 +224,7 @@ func NewPoolConfig(initCap, maxCap int, maxIdleSeconds int64, serviceChan chan *
 	//update config service from serviceChan
 	go func() {
 		for {
+			//TODO remove test
 			time.Sleep(time.Second * 1)
 
 			serviceInfoList2 , ok := <- serviceChan

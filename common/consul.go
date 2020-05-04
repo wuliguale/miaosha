@@ -255,23 +255,19 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 func (client *ConsulClient) SendServiceInfoList2Chan(serviceName string, serviceInfoList *ConsulServiceInfoList) (err error) {
 	err = errors.New("send serviceInfoList to chan fail")
 
-	for {
-		select {
-		case client.ChanList[serviceName] <- serviceInfoList:
-			fmt.Println("consul send serviceInfoList to chan succ")
-			err = nil
-			break
-		case <- time.After(2 * time.Second):
-			fmt.Println("consul send serviceInfoList to chan timeout")
-			err = nil
-			break
-		default:
-			//chan size = 1, save latest serviceInfoList
-			fmt.Println("consul clear chan")
-			<- client.ChanList[serviceName]
-		}
+	//clear chan
+	for _ = range client.ChanList[serviceName] {
+		fmt.Println("clear chan")
 	}
 
+	select {
+	case client.ChanList[serviceName] <- serviceInfoList:
+		fmt.Println("consul send serviceInfoList to chan succ")
+		err = nil
+	case <- time.After(2 * time.Second):
+		fmt.Println("consul send serviceInfoList to chan timeout")
+	}
+	
 	return err
 }
 
