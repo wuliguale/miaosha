@@ -223,11 +223,10 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 			log.Println("service watch error: ", err)
 		}
 
-		log.Println(metaInfo.LastIndex, len(serviceList), err)
+		log.Println(serviceName, lastIndex, metaInfo.LastIndex, len(serviceList), err)
 
 		//数据有变化才写入，避免频繁写入，如果cache过期可以在get时加入，不需要watch时一直写
 		if lastIndex != metaInfo.LastIndex{
-			//todo	 use callback update redis connection
 			//有数据
 			if len(serviceList) >= 0 {
 				serviceInfoList := client.FormatApiServiceList2ServiceInfoList(serviceName, serviceList)
@@ -253,12 +252,17 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 
 
 func (client *ConsulClient) SendServiceInfoList2Chan(serviceName string, serviceInfoList *ConsulServiceInfoList) (err error) {
+	log.Println("consul send serviceInfoList to chan", serviceName)
+
 	err = errors.New("send serviceInfoList to chan fail")
 
 	//clear chan
-	for _ = range client.ChanList[serviceName] {
+	for serviceInfoListOld := range client.ChanList[serviceName] {
+		fmt.Println(serviceInfoListOld)
 		fmt.Println("clear chan")
 	}
+
+	log.Println("consul send serviceInfoList to chan2", serviceName)
 
 	select {
 	case client.ChanList[serviceName] <- serviceInfoList:
@@ -267,6 +271,8 @@ func (client *ConsulClient) SendServiceInfoList2Chan(serviceName string, service
 	case <- time.After(2 * time.Second):
 		fmt.Println("consul send serviceInfoList to chan timeout")
 	}
+
+	log.Println("consul send serviceInfoList to chan3", serviceName)
 	
 	return err
 }
