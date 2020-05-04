@@ -1,6 +1,6 @@
 # 秒杀demo
 
-##一、功能与实现
+## 一、功能与实现
 
 #### Kong：负载均衡，jwt鉴权，流量控制
 1. Kong集群，通过连接相同的PostgreSQL共享配置，可水平扩展，修改不用重启
@@ -50,46 +50,46 @@
 
 ------------
 
-##二、目录结构
+## 二、目录结构
 conf/，配置文件目录
 
-common/，通用功能目录
-　　config，配置文件读取等操作
-　　**consul**，服务发现和服务监控（watch）
-　　freecache，freeCache相关功能，可设置缓存过期时间
-　　jwt，kong所使用的jwt生成和解析
-　　**mysql**，mysql连接池
-　　**pool**，通用连接池
-　　**rabbitmq**，rabbitmq连接池
-　　**redis**，redis的smart客户端
+common/，通用功能目录<br>
+　　config，配置文件读取等操作<br>
+　　**consul**，服务发现和服务监控（watch）<br>
+　　freecache，freeCache相关功能，可设置缓存过期时间<br>
+　　jwt，kong所使用的jwt生成和解析<br>
+　　**mysql**，mysql连接池<br>
+　　**pool**，通用连接池<br>
+　　**rabbitmq**，rabbitmq连接池<br>
+　　**redis**，redis的smart客户端<br>
 
-fronted/，前台功能
-　　web/
-  　　　controllers／
-　　　　　　**product**,秒杀接口，和商品操作相关功能
-　　　　　　**user**，用户登录和注册页面（thrift rpc调用用户服务）
-　　　　views／
-　　**main**，前台main
-　　**mq_receive**，订单服务，从rabbitmq消费数据生成订单
-　　**rpc_user_server**，用户服务，通过thrift rpc被调用
+fronted/，前台功能<br>
+　　web/<br>
+  　　　controllers／<br>
+　　　　　　**product**,秒杀接口，和商品操作相关功能<br>
+　　　　　　**user**，用户登录和注册页面（thrift rpc调用用户服务）<br>
+　　　　views／<br>
+　　**main**，前台main<br>
+　　**mq_receive**，订单服务，从rabbitmq消费数据生成订单<br>
+　　**rpc_user_server**，用户服务，通过thrift rpc被调用<br>
 
-backend/，后台功能
+backend/，后台功能<br>
 
-rpc/，rpc相关
-　　gen-go/，thrift生成的服务端代码
-　　user.thrift，定义的thrift服务
-　　**user-client**，thrift客户端访问user服务的代码
+rpc/，rpc相关<br>
+　　gen-go/，thrift生成的服务端代码<br>
+　　user.thrift，定义的thrift服务<br>
+　　**user-client**，thrift客户端访问user服务的代码<br>
 
-datamodels/
-repositories/
-services/
+datamodels/<br>
+repositories/<br>
+services/<br>
 
 
 ------------
 
 
-##三、架构图
-![miaosha-demo struct](http://file.chunyujingchun.com/bhl/158859868393370.png "miaosha-demo struct")
+## 三、架构图
+[miaosha-demo图](http://file.chunyujingchun.com/bhl/158859868393370.png)
 
 
 
