@@ -154,7 +154,7 @@ func (p *ProductController) GetOrder() {
 	}
 
 	//秒杀是否已结束
-	pidOverKey := "pid_over_" + strconv.Itoa(int(pid))
+	pidOverKey := fmt.Sprintf("pid_over_%d", pid)
 	isOver, err := p.RedisClusterClient.Get(pidOverKey).Int()
 	if err != nil  && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "检查秒杀是否结束出错" + err.Error())
@@ -165,20 +165,20 @@ func (p *ProductController) GetOrder() {
 		return
 	}
 
-	//是否重复购买
-	isRepeatKey := "pid_" + strconv.Itoa(int(pid))
-	isRepeat, err := p.RedisClusterClient.GetBit(isRepeatKey, uid).Result()
+	//是否已参加过
+	isRepeatKey := fmt.Sprintf("pid_uid_repeat_%d_%d",  pid, uid)
+	isRepeat, err := p.RedisClusterClient.Incr(isRepeatKey).Result()
 	if err != nil && err != redis.Nil {
-		ReturnJsonFail(p.Ctx, "检查是否重复购买出错" + err.Error())
+		ReturnJsonFail(p.Ctx, "检查是否重复参加出错" + err.Error())
 		return
 	}
-	if isRepeat > 0 {
-		ReturnJsonFail(p.Ctx, "不能重复购买")
+	if isRepeat > 1 {
+		ReturnJsonFail(p.Ctx, "不能重复参加")
 		return
 	}
 
 	//检查库存
-	numKey := "pid_num_" + strconv.Itoa(int(pid))
+	numKey := fmt.Sprintf("pid_num_%d", pid)
 	num, err := p.RedisClusterClient.Decr(numKey).Result()
 	if err != nil && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "redis检查库存错误" + err.Error())
@@ -227,13 +227,6 @@ func (p *ProductController) GetOrder() {
 
 	if err != nil {
 		ReturnJsonFail(p.Ctx, "mq publish 错误")
-		return
-	}
-
-	//标记用户已购买
-	err = p.RedisClusterClient.SetBit(isRepeatKey, uid, 1).Err()
-	if err != nil && err != redis.Nil {
-		ReturnJsonFail(p.Ctx, "标记用户已购买时出错")
 		return
 	}
 
