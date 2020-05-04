@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
+	"log"
 	"miaosha-demo/common"
 	"miaosha-demo/fronted/web/controllers"
 	"miaosha-demo/repositories"
@@ -31,18 +31,48 @@ func main() {
 	defer cancel()
 
 	config, err := common.NewConfigConsul()
-	fmt.Println("new config,", err)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	cache := common.NewFreeCacheClient(20)
 
 	Consul, err := common.NewConsulClient(config, cache)
-	fmt.Println("new consul", err)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	//取consul上redis service的配置
 	redisClusterClient, err := common.NewRedisClusterClient(Consul)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	mysqlPoolUser, err := common.NewMysqlPoolUser(Consul)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	mysqlPoolProduct, err := common.NewMysqlPoolProduct(Consul)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	rabbitmqPool, err := common.NewRabbitmqPool(Consul)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	rpcUser, err := user.NewRpcUser(Consul)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	userRepository := repositories.NewUserRepository(mysqlPoolUser)
 	userService := services.NewUserService(userRepository)

@@ -105,12 +105,22 @@ func main() {
 	}
 
 	config, err := common.NewConfigConsul()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	freeCache := common.NewFreeCacheClient(5)
 	consulClient, err := common.NewConsulClient(config, freeCache)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	mysqlPoolUser, err := common.NewMysqlPoolUser(consulClient)
 	if err != nil {
-
+		log.Println(err)
+		return
 	}
 
 	//4. xxxHandler
