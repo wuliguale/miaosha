@@ -258,13 +258,16 @@ func (client *ConsulClient) SendServiceInfoList2Chan(serviceName string, service
 	for {
 		select {
 		case client.ChanList[serviceName] <- serviceInfoList:
+			fmt.Println("consul send serviceInfoList to chan succ")
 			err = nil
 			break
 		case <- time.After(2 * time.Second):
+			fmt.Println("consul send serviceInfoList to chan timeout")
 			err = nil
 			break
 		default:
 			//chan size = 1, save latest serviceInfoList
+			fmt.Println("consul clear chan")
 			<- client.ChanList[serviceName]
 		}
 	}

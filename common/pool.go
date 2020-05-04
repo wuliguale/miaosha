@@ -29,8 +29,9 @@ func NewPool(config *PoolConfig) (*Pool, error) {
 
 
 func (pool *Pool) InitPool() (err error) {
-	pool.ClosePool()
-	pool.channel = make(chan *PoolConn, pool.config.maxCap)
+	for poolConn := range pool.channel {
+		pool.CloseConn(poolConn)
+	}
 
 	for i := 0; i < pool.config.initCap; i++ {
 		fmt.Println("newpool for ", i)
@@ -197,15 +198,13 @@ func NewPoolConfig(initCap, maxCap int, maxIdleSeconds int64, serviceChan chan *
 		return nil, errors.New("invalid pool config")
 	}
 
-	serviceInfoListInterface, err := SelectReceiveWithTimeout(serviceChan, 2)
-	if err != nil {
+	serviceInfoList , ok := <- serviceChan
+	if !ok {
+		//chan closed
 		return nil, errors.New("pool get serviceInfoList from ch fail")
 	}
-	serviceInfoList, ok := serviceInfoListInterface.(*ConsulServiceInfoList)
-	if !ok {
-		return nil, errors.New("pool serviceInfoListInterface assert fail")
-	}
-
+	fmt.Println(serviceInfoList)
+	
 	config = &PoolConfig{
 		initCap:initCap,
 		maxCap:maxCap,
@@ -219,6 +218,8 @@ func NewPoolConfig(initCap, maxCap int, maxIdleSeconds int64, serviceChan chan *
 	//update config service from serviceChan
 	go func() {
 		for {
+			time.Sleep(time.Second * 1)
+
 			serviceInfoList2 , ok := <- serviceChan
 			if !ok {
 				//chan closed
