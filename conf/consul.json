@@ -1,5 +1,5 @@
 {
-  "host" : "121.36.61.156",
+  "host" : "172.18.0.99",
   "port" : 8500,
   "services" : {
     "miaosha-demo-proxysql-user" :{
