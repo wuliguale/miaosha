@@ -1,6 +1,7 @@
 # 秒杀demo
 
 ## 一、功能与实现
+使用Go框架Iris开发，基于Docker搭建集群
 
 #### 秒杀流程
 1. 将商品信息放入Redis
@@ -98,7 +99,7 @@ services/<br>
 
 
 ## 三、架构图
-[miaosha-demo图](https://app.yinxiang.com/shard/s48/nl/27140383/2bca25da-bd09-428e-9d59-65b0b87158d7)
+[miaosha-demo图](https://note.youdao.com/ynoteshare1/index.html?id=33026920739ca35a73440fffbf326869)
 
 
 
