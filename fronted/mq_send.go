@@ -1,22 +1,35 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"github.com/streadway/amqp"
 	"log"
 	"miaosha-demo/common"
-	"time"
 )
 
 func main() {
-	//不需要http://xxx
-	conn, err := amqp.Dial("amqp://root:root@121.36.61.156/:5672/")
-	common.FailOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
+	flagNum := flag.Int("num", 0, "message num")
+	flag.Parse()
+	num := *flagNum
+
+	config, err := common.NewConfigConsul()
+	common.FailOnError(err, "fail to new config")
+
+	cache := common.NewFreeCacheClient(10)
+	consul, err := common.NewConsulClient(config, cache)
+	common.FailOnError(err, "fail to new consul")
+
+	mqPool, err := common.NewRabbitmqPool(consul)
+	common.FailOnError(err, "fail to new mq pool")
+
+	conn, err := mqPool.Get()
+	defer mqPool.Put(conn)
+	common.FailOnError(err, "fail to get conn from pool")
 
 	ch, err := conn.Channel()
 	common.FailOnError(err, "Failed to open a channel")
 	defer ch.Close()
-
 
 	/*
 	//设置此交换器的备份交换器，用于收集此发到此交换器的不匹配队列的消息
@@ -43,30 +56,8 @@ func main() {
 		common.FailOnError(err, "confirm mode fail")
 	}
 
-
 	channelReturn := make(chan amqp.Return)
 	ch.NotifyReturn(channelReturn)
-
-
-	body := time.Now().String()
-
-	//使用Channel.NotifyReturn 处理发送失败被返回的消息
-	//Channel.NotifyPublish（添加监听） + Channel.Confirm（进入confirm模式） 确保所有消息发送成功
-	err = ch.Publish(
-		"my_exchange",          // exchange
-		"aaa.bbb.ddd", // routing key 绑定键可以模糊，发送消息的路由键不能模糊
-		false, //没有绑定的队列时，true返回消息，false丢弃
-		false, //建议false，否则会发不到队列。没有消费者时，true返回，false丢弃
-		amqp.Publishing{
-			//DeliveryMode: amqp.Persistent,	//消息持久化， queue durable+消息持久化，才能不丢消息
-			ContentType: "text/plain",
-			Body:        []byte(body),
-			//Expiration:"5000",
-		})
-
-	common.FailOnError(err, "Failed to publish a message")
-
-	log.Printf(" [x] Sent %s", body)
 
 	go func() {
 		for ret := range channelReturn {
@@ -81,10 +72,27 @@ func main() {
 		}
 	}()
 
+	for i := 0; i < num; i++ {
+		pid := i * 2
+		uid := i
+		body := fmt.Sprintf("%d_%d", pid, uid)
 
-	forever := make(chan bool)
-	<-forever
+		//使用Channel.NotifyReturn 处理发送失败被返回的消息
+		//Channel.NotifyPublish（添加监听） + Channel.Confirm（进入confirm模式） 确保所有消息发送成功
+		err = ch.Publish(
+			"miaosha_demo_exchange",          // exchange
+			"aaa.bbb.ccc", // routing key 绑定键可以模糊，发送消息的路由键不能模糊
+			false, //没有绑定的队列时，true返回消息，false丢弃
+			false, //建议false，否则会发不到队列。没有消费者时，true返回，false丢弃
+			amqp.Publishing{
+				//DeliveryMode: amqp.Persistent,	//消息持久化， queue durable+消息持久化，才能不丢消息
+				ContentType: "text/plain",
+				Body:        []byte(body),
+				//Expiration:"5000",
+			})
 
+		common.FailOnError(err, "Failed to publish a message")
+	}
 }
 
 
