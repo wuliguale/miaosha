@@ -55,7 +55,7 @@ func main() {
 
 	*/
 
-	time.Sleep(time.Second * 20)
+	time.Sleep(time.Second * 10)
 
 	confirms := ch.NotifyPublish(make(chan amqp.Confirmation, 1))
 	if err := ch.Confirm(false); err != nil {
@@ -73,9 +73,9 @@ func main() {
 
 	go func() {
 		//confirmed := <-confirms
-		for confirmed := range confirms {
-			log.Printf("confirm: [x] %v", confirmed)
-		}
+		//for confirmed := range confirms {
+		//	log.Printf("confirm: [x] %v", confirmed)
+		//}
 	}()
 
 	time1 := time.Now()
