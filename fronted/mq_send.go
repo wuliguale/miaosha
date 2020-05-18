@@ -71,14 +71,19 @@ func main() {
 		}
 	}()
 
+	time1 := time.Now()
+
 	go func() {
 		//confirmed := <-confirms
-		//for confirmed := range confirms {
-		//	log.Printf("confirm: [x] %v", confirmed)
-		//}
+		for confirmed := range confirms {
+			if !confirmed.Ack {
+				log.Printf("confirm: [x] %v", confirmed)
+			}
+		}
+
+		fmt.Println("confirm time:", time.Now().Sub(time1))
 	}()
 
-	time1 := time.Now()
 
 	end := offset + limit
 	for i := offset; i <= end; i++ {
@@ -104,7 +109,7 @@ func main() {
 	}
 
 	time2 := time.Now()
-	fmt.Println(time2.Sub(time1))
+	fmt.Println("end time:", time2.Sub(time1))
 
 }
 
