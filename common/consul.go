@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/consul/api"
-	"log"
 	"sync"
 	"time"
 )
@@ -134,7 +133,8 @@ func NewConsulClient(configConsul *ConfigConsul, freeCache *FreeCacheClient) (co
 func (client *ConsulClient) GetServiceByName(serviceName string) (serviceInfo *ConsulServiceInfo, err error) {
 	serviceInfoList, err := client.GetServiceListByName(serviceName)
 	if err != nil {
-		log.Fatalln("get service info list fail: ", err)
+		ZapError("get service info list fail", err)
+		return nil, err
 	}
 
 	return serviceInfoList.GetNext()
@@ -145,39 +145,43 @@ func (client *ConsulClient) GetServiceListByName (serviceName string) (serviceIn
 	//先从cache取
 	serviceConfig, err := client.Config.GetServiceConfigByName(serviceName)
 	if err != nil {
-		log.Fatalln("get service config fail: ", err)
+		ZapError("get service config fail", err)
+		return nil, err
 	}
 
 	cacheKey := serviceConfig.CacheKey
 	cacheData, err := client.Cache.Get([]byte(cacheKey))
 	if err != nil && !client.Cache.IsNotFound(err) {
-		log.Fatalln("get service list from cache fail ", err)
+		ZapError("get service list from cache fail", err)
+		return nil, err
 	}
 
 	//缓存没有就从线上consul取
 	if client.Cache.IsNotFound(err) {
-		log.Println("get cache not found")
+		zapInfo("get cache not found")
 
 		serviceInfoList, err = client.FetchServiceInfoListByName(serviceName)
 		if err != nil {
-			log.Fatalln("fetch service list from consul fail", err)
+			ZapError("fetch service list from consul fail", err)
+			return nil, err
 		}
 
 		//保存到cache
 		err = client.CacheServiceInfoList(serviceInfoList)
 		if err != nil {
-			log.Fatalln("cache service info list fail ", err)
+			ZapError("cache service info list fail ", err)
 		}
 		return serviceInfoList, nil
 	}
 
-	log.Println("get cache succ")
+	zapInfo("get cache succ")
 
 	//返回cache取出的数据
 	serviceInfoList = &ConsulServiceInfoList{}
 	err = json.Unmarshal(cacheData, serviceInfoList)
 	if err != nil {
-		log.Fatalln("get service info list from cache unmarshal fail ", err)
+		ZapError("get service info list from cache unmarshal fail ", err)
+		return nil, err
 	}
 
 	return serviceInfoList, err
@@ -189,6 +193,7 @@ func (client *ConsulClient) FetchServiceInfoListByName(serviceName string) (serv
 	serviceList, _, err := client.Health().Service(serviceName, "", true, &api.QueryOptions{})
 
 	if err != nil {
+		ZapError("fetch service info list by name fail", err)
 		return nil, err
 	}
 
@@ -204,7 +209,7 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 
 	serviceConfig, err := client.Config.GetServiceConfigByName(serviceName)
 	if err != nil {
-		log.Println("get service config fail: ", err)
+		ZapError("get service config fail: ", err)
 	}
 
 	//从配置文件取等待时间和休息时间
@@ -220,7 +225,7 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 		})
 
 		if err != nil {
-			log.Println("service watch error: ", err)
+			ZapError("service watch error: ", err)
 		}
 
 		//log.Println(serviceName, lastIndex, metaInfo.LastIndex, len(serviceList), err)
@@ -236,10 +241,10 @@ func (client *ConsulClient) WatchServiceByName(serviceName string) {
 
 				err = client.CacheServiceInfoList(serviceInfoList)
 				if err != nil {
-					log.Println("cache serviceInfoList fail ", err)
+					ZapError("cache serviceInfoList fail ", err)
 				}
 
-				log.Println("watch cache serviceInfoList", serviceInfoList)
+				zapInfo("watch cache serviceInfoList")
 			}
 		}
 
@@ -260,14 +265,14 @@ func (client *ConsulClient) SendServiceInfoList2Chan(serviceName string, service
 	default:
 	}
 
-	log.Println("consul send serviceInfoList to chan2", serviceName)
+	zapInfo("consul send serviceInfoList to chan2", serviceName)
 
 	select {
 	case client.ChanList[serviceName] <- serviceInfoList:
-		fmt.Println("consul send serviceInfoList to chan succ")
+		zapInfo("consul send serviceInfoList to chan succ")
 		err = nil
 	case <- time.After(1 * time.Second):
-		fmt.Println("consul send serviceInfoList to chan timeout")
+		zapInfo("consul send serviceInfoList to chan timeout")
 	}
 
 	return err
@@ -299,12 +304,14 @@ func (client *ConsulClient) FormatApiServiceList2ServiceInfoList (serviceName st
 func (client *ConsulClient) CacheServiceInfoList (serviceInfoList *ConsulServiceInfoList) (err error){
 	cacheDataByte, err := json.Marshal(*serviceInfoList)
 	if err != nil {
+		ZapError("cache service info list marshal fail", err)
 		return err
 	}
 
 	serviceConfig, err := client.Config.GetServiceConfigByName(serviceInfoList.Name)
 	if err != nil {
-		log.Fatalln("get service config fail: ", err)
+		ZapError("get service config fail: ", err)
+		return err
 	}
 
 	//get cache key from config
@@ -342,7 +349,8 @@ func (client *ConsulClient) RegisterServer(serviceName string, serviceTags []str
 
 	serviceConfig, err := client.Config.GetServiceConfigByName(serviceName)
 	if err != nil {
-		log.Fatalln("get service config fail: ", err)
+		ZapError("get service config fail: ", err)
+		return err
 	}
 
 	//健康检查
@@ -359,7 +367,8 @@ func (client *ConsulClient) RegisterServer(serviceName string, serviceTags []str
 	//服务注册，重复则覆盖
 	err = client.Agent().ServiceRegister(registration)
 	if err != nil {
-		log.Fatalln("rpc user register server fail ", err)
+		ZapError("rpc user register server fail ", err)
+		return err
 	}
 
 	//使用ttl刷新服务状态
@@ -378,7 +387,8 @@ func (client *ConsulClient) DeregisterService (serviceName, localIp string, loca
 	err := client.Agent().ServiceDeregister(serviceId)
 
 	if err != nil {
-		log.Fatalln("rpc user deregister server  fail", err)
+		ZapError("rpc user deregister server  fail", err)
+		return err
 	}
 
 	return nil
