@@ -6,12 +6,16 @@ import (
 	"github.com/streadway/amqp"
 	"log"
 	"miaosha-demo/common"
+	"time"
 )
 
 func main() {
-	flagNum := flag.Int("num", 0, "message num")
+	flagOffset := flag.Int("offset", 0, "message offset")
+	flagLimit := flag.Int("limit", 0, "message limit")
+
 	flag.Parse()
-	num := *flagNum
+	offset := *flagOffset
+	limit := *flagLimit
 
 	config, err := common.NewConfigConsul()
 	common.FailOnError(err, "fail to new config")
@@ -51,6 +55,8 @@ func main() {
 
 	*/
 
+	time.Sleep(time.Second * 10)
+
 	confirms := ch.NotifyPublish(make(chan amqp.Confirmation, 1))
 	if err := ch.Confirm(false); err != nil {
 		common.FailOnError(err, "confirm mode fail")
@@ -65,14 +71,22 @@ func main() {
 		}
 	}()
 
+	time1 := time.Now()
+
 	go func() {
 		//confirmed := <-confirms
 		for confirmed := range confirms {
-			log.Printf("confirm: [x] %v", confirmed)
+			if !confirmed.Ack {
+				log.Printf("confirm: [x] %v", confirmed)
+			}
 		}
+
+		fmt.Println("confirm time:", time.Now().Sub(time1))
 	}()
 
-	for i := 0; i < num; i++ {
+
+	end := offset + limit
+	for i := offset; i <= end; i++ {
 		pid := i * 2
 		uid := i
 		body := fmt.Sprintf("%d_%d", pid, uid)
@@ -93,6 +107,10 @@ func main() {
 
 		common.FailOnError(err, "Failed to publish a message")
 	}
+
+	time2 := time.Now()
+	fmt.Println("end time:", time2.Sub(time1))
+
 }
 
 

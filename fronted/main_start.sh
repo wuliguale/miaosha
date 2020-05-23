@@ -5,6 +5,12 @@ rm main
 
 go build main.go
 
-./main
+ps -aux | grep main | grep -v grep | grep -v \.sh | awk '{print $2}' | while read pid
+do
+    echo "kill main $pid"
+    kill -9 $pid
+done
+
+./main &
 
 

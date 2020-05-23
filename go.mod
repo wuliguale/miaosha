@@ -17,7 +17,9 @@ require (
 	github.com/jolestar/go-commons-pool v2.0.0+incompatible // indirect
 	github.com/kataras/iris/v12 v12.1.8
 	github.com/kataras/pio v0.0.2
+	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71
+	go.uber.org/zap v1.15.0
 	golang.org/x/crypto v0.0.0-20191227163750-53104e6ec876
 )

@@ -38,7 +38,10 @@ func NewMysqlPool(consul *ConsulClient, serviceName, dbName string) (mysqlPool *
 
 	validateFunc := func(closer io.Closer) bool {
 		db, ok := closer.(*gorm.DB)
-		fmt.Println(ok)
+		if !ok {
+			ZapError("closer not gorm db", nil)
+			return false
+		}
 
 		err := db.Exec("SELECT 1;").Error
 		if err != nil {
@@ -67,13 +70,13 @@ func NewMysqlPool(consul *ConsulClient, serviceName, dbName string) (mysqlPool *
 func (mysqlPool MysqlPool) Get() (conn *gorm.DB, err error) {
 	closer, err := mysqlPool.pool.Get()
 	if err != nil {
-		fmt.Println("get error", err)
+		ZapError("get fail", err)
 		return
 	}
 
 	conn, ok := closer.(*gorm.DB)
 	if !ok {
-		fmt.Println("assert", ok)
+		ZapError("closer not gorm db", nil)
 	}
 
 	return conn, nil

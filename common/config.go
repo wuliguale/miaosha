@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -14,7 +13,10 @@ func init() {
 	//开发环境
 	if runtime.GOOS == "windows" {
 		os.Setenv("CONF_DIR", "D:/Code/go/src/miaosha-demo/conf")
+		os.Setenv("LOG_DIR", "D:/Code/go/src/miaosha-demo")
 	} else {
+		os.Setenv("LOG_DIR", "/var/log/miaosha-demo")
+
 		out, err := exec.Command("/bin/bash", "-c", "ip addr show | grep 192.168.0.73").Output()
 		if err == nil && len(out) > 0 {
 			//remote
@@ -30,6 +32,11 @@ func init() {
 //consul的配置文件
 func GetConfigFileConsul() (file string) {
 	return os.Getenv("CONF_DIR") + "/consul.json"
+}
+
+
+func GetLogFile() (file string) {
+	return os.Getenv("LOG_DIR") + "/miaosha.log"
 }
 
 
@@ -56,7 +63,7 @@ func NewConfigConsul() (configConsul *ConfigConsul, err error){
 	fileName := GetConfigFileConsul()
 	consulByte, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		log.Fatalln("conf read fail", err)
+		ZapError("conf read fail", err)
 		return nil, err
 	}
 
@@ -64,7 +71,7 @@ func NewConfigConsul() (configConsul *ConfigConsul, err error){
 	err = json.Unmarshal(consulByte, configConsul)
 
 	if err != nil {
-		log.Fatalln("conf consul unmarshal fail ", err)
+		ZapError("conf consul unmarshal fail", err)
 		return nil, err
 	}
 
