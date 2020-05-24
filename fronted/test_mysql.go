@@ -59,10 +59,10 @@ func read(num int, mysqlPool *common.MysqlPool) {
 	}
 	timeEnd := time.Now()
 
-	timeTotal := timeEnd.Sub(timeStart).Microseconds()
+	timeTotal := timeEnd.Sub(timeStart).Milliseconds()
 	timeAvg := timeTotal / int64(num)
 
-	fmt.Println("mysql read: %d, time total: %d, time avg: %d", num, timeTotal, timeAvg)
+	fmt.Println(fmt.Sprintf("mysql read: %d, time total: %d ms, time avg: %d ms", num, timeTotal, timeAvg))
 }
 
 
@@ -87,10 +87,10 @@ func write(num int, mysqlPool *common.MysqlPool) {
 		}
 	}
 	timeEnd := time.Now()
-	timeTotal := timeEnd.Sub(timeStart).Microseconds()
+	timeTotal := timeEnd.Sub(timeStart).Milliseconds()
 	timeAvg := timeTotal / int64(num)
-
-	fmt.Println("mysql write: %d, time total: %d, time avg: %d", num, timeTotal, timeAvg)
+	
+	fmt.Println(fmt.Sprintf("mysql write: %d, time total: %d ms, time avg: %d ms", num, timeTotal, timeAvg))
 }
 
 
