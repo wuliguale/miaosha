@@ -115,6 +115,6 @@ func main() {
 	timeEnd := time.Now()
 	timeTotal := timeEnd.Sub(timeStart).Microseconds()
 	timeAvg := timeTotal/ int64(total)
-	fmt.Println("transactionNum:%d,timeTotal:%d, timeAvg:%d", total, timeTotal, timeAvg)
+	fmt.Println(fmt.Sprintf("transactionNum:%d,timeTotal:%d, timeAvg:%d", total, timeTotal, timeAvg))
 }
 
