@@ -9,6 +9,7 @@ import (
 	"github.com/kataras/iris/v12/sessions"
 	"github.com/streadway/amqp"
 	"log"
+	"math/rand"
 	"miaosha-demo/common"
 	"miaosha-demo/services"
 	"strconv"
@@ -129,8 +130,6 @@ func (p *ProductController) GetOrder() {
 		return
 	}
 
-	fmt.Println(jwtMap)
-
 	pidStr := jwtMap["pid"].(string)
 	uidStr := jwtMap["uid"].(string)
 
@@ -147,6 +146,8 @@ func (p *ProductController) GetOrder() {
 
 	pid := int64(pidInt)
 	uid := int64(uidInt)
+	//pid for test
+	uid = time.Now().Unix()
 
 	if pid == 0 || uid == 0 || err != nil {
 		ReturnJsonFail(p.Ctx, "参数错误")
@@ -154,7 +155,8 @@ func (p *ProductController) GetOrder() {
 	}
 
 	//秒杀是否已结束
-	pidOverKey := fmt.Sprintf("pid_over_%d", pid)
+	//热键分散
+	pidOverKey := fmt.Sprintf("%d_pid_over_%d", rand.Intn(99), pid)
 	isOver, err := p.RedisClusterClient.Get(pidOverKey).Int()
 	if err != nil  && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "检查秒杀是否结束出错" + err.Error())
@@ -178,7 +180,8 @@ func (p *ProductController) GetOrder() {
 	}
 
 	//检查库存
-	numKey := fmt.Sprintf("pid_num_%d", pid)
+	//热键分散
+	numKey := fmt.Sprintf("%d_pid_num_%d", rand.Intn(99), pid)
 	num, err := p.RedisClusterClient.Decr(numKey).Result()
 	if err != nil && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "redis检查库存错误" + err.Error())
