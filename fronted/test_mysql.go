@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	flagWrite := flag.Int("write", 0, "is write")
+	flagRed := flag.Int("read", 1, "is read")
 	flagNum := flag.Int("num", 10, "num")
 	flag.Parse()
 
@@ -35,7 +35,7 @@ func main() {
 		return
 	}
 
-	if *flagWrite == 1 {
+	if *flagRed == 1 {
 		read(*flagNum, mysqlPool)
 	} else {
 		write(*flagNum, mysqlPool)
@@ -89,7 +89,7 @@ func write(num int, mysqlPool *common.MysqlPool) {
 	timeEnd := time.Now()
 	timeTotal := timeEnd.Sub(timeStart).Milliseconds()
 	timeAvg := timeTotal / int64(num)
-	
+
 	fmt.Println(fmt.Sprintf("mysql write: %d, time total: %d ms, time avg: %d ms", num, timeTotal, timeAvg))
 }
 
