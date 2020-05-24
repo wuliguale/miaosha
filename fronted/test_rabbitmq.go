@@ -1,18 +1,117 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"github.com/streadway/amqp"
+	"go.uber.org/zap"
 	"log"
 	"miaosha-demo/common"
-	"miaosha-demo/datamodels"
-	"miaosha-demo/repositories"
-	"miaosha-demo/services"
-	"strconv"
-	"strings"
 	"time"
 )
 
 func main() {
+
+}
+
+
+func send() {
+	flagOffset := flag.Int("offset", 0, "message offset")
+	flagLimit := flag.Int("limit", 0, "message limit")
+
+	flag.Parse()
+	offset := *flagOffset
+	limit := *flagLimit
+
+	config, err := common.NewConfigConsul()
+	if err != nil {
+		common.ZapError("new config fail", err)
+		return
+	}
+
+	cache := common.NewFreeCacheClient(10)
+	consul, err := common.NewConsulClient(config, cache)
+	if err != nil {
+		common.ZapError("new consul fail", err)
+		return
+	}
+
+	mqPool, err := common.NewRabbitmqPool(consul)
+	if err != nil {
+		common.ZapError("new rabbitmq pool fail", err)
+		return
+	}
+
+	conn, err := mqPool.Get()
+	defer mqPool.Put(conn)
+	if err != nil {
+		common.ZapError("mq get fail", err)
+		return
+	}
+
+	ch, err := conn.Channel()
+	defer ch.Close()
+	if err != nil {
+		common.ZapError("mq new channel fail", err)
+		return
+	}
+
+	confirms := ch.NotifyPublish(make(chan amqp.Confirmation, 1))
+	if err := ch.Confirm(false); err != nil {
+		common.ZapError("mq confirm mode fail", err)
+	}
+
+	channelReturn := make(chan amqp.Return)
+	ch.NotifyReturn(channelReturn)
+
+	go func() {
+		for ret := range channelReturn {
+			zap.L().Error(fmt.Sprintf("mq return %v", ret))
+		}
+	}()
+
+	go func() {
+		//confirmed := <-confirms
+		for confirmed := range confirms {
+			if !confirmed.Ack {
+				zap.L().Info(fmt.Sprintf("mq confirm %v", confirmed))
+			}
+		}
+	}()
+
+	end := offset + limit
+	timeStart := time.Now()
+	for i := offset; i <= end; i++ {
+		pid := i * 2
+		uid := i
+		body := fmt.Sprintf("%d_%d", pid, uid)
+
+		//使用Channel.NotifyReturn 处理发送失败被返回的消息
+		//Channel.NotifyPublish（添加监听） + Channel.Confirm（进入confirm模式） 确保所有消息发送成功
+		err = ch.Publish(
+			"miaosha_demo_exchange",          // exchange
+			"aaa.bbb.ccc", // routing key 绑定键可以模糊，发送消息的路由键不能模糊
+			false, //没有绑定的队列时，true返回消息，false丢弃
+			false, //建议false，否则会发不到队列。没有消费者时，true返回，false丢弃
+			amqp.Publishing{
+				//DeliveryMode: amqp.Persistent,	//消息持久化， queue durable+消息持久化，才能不丢消息
+				ContentType: "text/plain",
+				Body:        []byte(body),
+				//Expiration:"5000",
+			})
+
+		common.FailOnError(err, "Failed to publish a message")
+	}
+
+	timeEnd := time.Now()
+	timeTotal := timeEnd.Sub(timeStart).Microseconds()
+	timeAvg := timeTotal / int64(limit)
+
+	fmt.Println("mq send: %d, time total: %d, time avg: %d", limit, timeTotal, timeAvg)
+}
+
+
+func receive() {
 	config, err := common.NewConfigConsul()
 	if err != nil {
 		common.ZapError("new config fail", err)
@@ -23,13 +122,6 @@ func main() {
 	consulClient, err := common.NewConsulClient(config, freeCache)
 	if err != nil {
 		common.ZapError("new consul fail", err)
-		return
-	}
-
-	//连接db
-	mysqlPoolProduct, err := common.NewMysqlPoolProduct(consulClient)
-	if err != nil {
-		common.ZapError("new mysql pool product fail", err)
 		return
 	}
 
@@ -210,78 +302,21 @@ func main() {
 
 	go func() {
 		for d := range msgs {
-			orderRepository := repositories.NewOrderRepository(mysqlPoolProduct)
-			orderService := services.NewOrderService(orderRepository)
-
-			uidPidSlice := strings.Split(string(d.Body), "_")
-			pid, err := strconv.Atoi(uidPidSlice[0])
-			if err != nil {
-				common.ZapError("rabbitmq get pid fail", err)
-			}
-
-			uid , err := strconv.Atoi(uidPidSlice[1])
-			if err != nil {
-				common.ZapError("rabbitmq get uid fail", err)
-			}
-
-			order := &datamodels.Order{}
-			order.Uid = uint32(uid)
-			order.Pid = uint64(pid)
-			order.State = datamodels.OrderWait
-			order.CreateAt = time.Now().Unix()
-
-			err = orderService.InsertIgnoreOrder(order)
-			if err != nil {
-				common.ZapError("rabbitmq add order fail", err)
-			}
+			zap.L().Info(d.ConsumerTag)
 
 			//消费后确认
 			d.Ack(false)
 		}
-	}()
 
-
-	/*
-	//备份队列消费
-	msgsAe, err := ch.Consume(
-		qAe.Name,
-		"",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
-	common.FailOnError(err, "Failed to register a consumer2")
-	go func() {
-		for d2 := range msgsAe {
-			log.Printf("ae: [x] %v", d2)
-			d2.Ack(false)
-		}
 	}()
-
-	//死信队列消费
-	msgsDead, err := ch.Consume(
-		qDead.Name,
-		"",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
-	common.FailOnError(err, "Failed to register a consumer3")
-	go func() {
-		for d3 := range msgsDead {
-			log.Printf("dead: [x] %v", d3)
-			d3.Ack(false)
-		}
-	}()
-	*/
 
 	log.Printf(" [*] Waiting for logs. To exit press CTRL+C")
 	forever := make(chan bool)
 	<-forever
-
 }
+
+
+
+
+
 
