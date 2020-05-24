@@ -128,10 +128,10 @@ func send(offset, limit int) {
 	}
 
 	timeEnd := time.Now()
-	timeTotal := timeEnd.Sub(timeStart).Microseconds()
+	timeTotal := timeEnd.Sub(timeStart).Milliseconds()
 	timeAvg := timeTotal / int64(limit)
 
-	fmt.Println(fmt.Sprintf("mq send: %d, time total: %d, time avg: %d", limit, timeTotal, timeAvg))
+	fmt.Println(fmt.Sprintf("mq send: %d, time total: %d ms, time avg: %d ms", limit, timeTotal, timeAvg))
 }
 
 
@@ -327,11 +327,10 @@ func receive() {
 	go func() {
 		timeStart := time.Now()
 		for d := range msgs {
-			zap.L().Info("receive", zap.Int64("receive time", time.Now().Sub(timeStart).Microseconds()))
+			zap.L().Info("receive", zap.Int64("receive total ms", time.Now().Sub(timeStart).Milliseconds()))
 			//消费后确认
 			d.Ack(false)
 		}
-
 	}()
 
 	log.Printf(" [*] Waiting for logs. To exit press CTRL+C")
