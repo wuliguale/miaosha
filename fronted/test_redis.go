@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/go-redis/redis/v7"
@@ -13,6 +14,28 @@ import (
 测试redis的处理时间
  */
 func main() {
+	common.NewZapLogger()
+
+	defer func() {
+		//recover panic, only for unexpect exception
+		r := recover()
+
+		if r != nil {
+			var rerr error
+			switch e := r.(type) {
+			case string:
+				rerr = errors.New(e)
+			case error:
+				rerr = e
+			default:
+				rerr = errors.New(fmt.Sprintf("%v", e))
+			}
+			common.ZapError("recover error", rerr)
+		}
+
+		zap.L().Sync()
+	} ()
+
 	flagTotal := flag.Int("total", 100, "transaction total")
 	flag.Parse()
 	total := *flagTotal
