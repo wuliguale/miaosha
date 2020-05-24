@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/streadway/amqp"
@@ -11,18 +12,41 @@ import (
 )
 
 func main() {
+	common.NewZapLogger()
+	defer func() {
+		//recover panic, only for unexpect exception
+		r := recover()
 
+		if r != nil {
+			var rerr error
+			switch e := r.(type) {
+			case string:
+				rerr = errors.New(e)
+			case error:
+				rerr = e
+			default:
+				rerr = errors.New(fmt.Sprintf("%v", e))
+			}
+			common.ZapError("recover error", rerr)
+		}
+
+		zap.L().Sync()
+	} ()
+
+	flagSend := flag.Int("send", 1, "mq send")
+	flagOffset := flag.Int("offset", 0, "message offset")
+	flagLimit := flag.Int("limit", 0, "message limit")
+	flag.Parse()
+
+	if *flagSend == 1 {
+		send(*flagOffset, *flagLimit)
+	} else {
+		receive()
+	}
 }
 
 
-func send() {
-	flagOffset := flag.Int("offset", 0, "message offset")
-	flagLimit := flag.Int("limit", 0, "message limit")
-
-	flag.Parse()
-	offset := *flagOffset
-	limit := *flagLimit
-
+func send(offset, limit int) {
 	config, err := common.NewConfigConsul()
 	if err != nil {
 		common.ZapError("new config fail", err)
@@ -107,7 +131,7 @@ func send() {
 	timeTotal := timeEnd.Sub(timeStart).Microseconds()
 	timeAvg := timeTotal / int64(limit)
 
-	fmt.Println("mq send: %d, time total: %d, time avg: %d", limit, timeTotal, timeAvg)
+	fmt.Println(fmt.Sprintf("mq send: %d, time total: %d, time avg: %d", limit, timeTotal, timeAvg))
 }
 
 
@@ -301,6 +325,8 @@ func receive() {
 	}
 
 	go func() {
+		zap.L().Info("receive start", zap.Time("receive", time.Now()))
+		
 		for d := range msgs {
 			zap.L().Info(d.ConsumerTag)
 
