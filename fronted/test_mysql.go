@@ -29,16 +29,22 @@ func main() {
 		return
 	}
 
-	mysqlPool, err := common.NewMysqlPoolProduct(consul)
+	mysqlPoolProduct, err := common.NewMysqlPoolProduct(consul)
 	if err != nil {
-		common.ZapError("new mysql pool fail", err)
+		common.ZapError("new mysql pool product fail", err)
+		return
+	}
+
+	mysqlPoolUser, err := common.NewMysqlPoolUser(consul)
+	if err != nil {
+		common.ZapError("new mysql pool user fail", err)
 		return
 	}
 
 	if *flagRed == 1 {
-		read(*flagNum, mysqlPool)
+		read(*flagNum, mysqlPoolUser)
 	} else {
-		write(*flagNum, mysqlPool)
+		write(*flagNum, mysqlPoolProduct)
 	}
 }
 
