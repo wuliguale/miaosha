@@ -325,13 +325,11 @@ func receive() {
 	}
 
 	go func() {
-		zap.L().Info("receive start", zap.Time("receive start time:", time.Now()))
-		
+		timeStart := time.Now()
 		for d := range msgs {
-			zap.L().Info("receive", zap.Time("receive time", time.Now()))
+			zap.L().Info("receive", zap.Int64("receive time", time.Now().Sub(timeStart).Microseconds()))
 			//消费后确认
 			d.Ack(false)
-
 		}
 
 	}()
