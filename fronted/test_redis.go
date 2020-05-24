@@ -71,12 +71,12 @@ func main() {
 		isOver, err := redisClusterClient.Get(pidOverKey).Int()
 		if err != nil  && err != redis.Nil {
 			common.ZapError("检查秒杀是否结束出错", err)
-			return
+			continue
 		}
 
 		if isOver > 0 {
 			zap.L().Info("秒杀已结束")
-			return
+			continue
 		}
 
 		//是否已参加过
@@ -84,11 +84,11 @@ func main() {
 		isRepeat, err := redisClusterClient.Incr(isRepeatKey).Result()
 		if err != nil && err != redis.Nil {
 			common.ZapError("检查是否重复参加出错", err)
-			return
+			continue
 		}
 		if isRepeat > 1 {
 			zap.L().Info("不能重复参加")
-			return
+			continue
 		}
 
 		//检查库存
@@ -96,7 +96,7 @@ func main() {
 		num, err := redisClusterClient.Decr(numKey).Result()
 		if err != nil && err != redis.Nil {
 			common.ZapError("redis检查库存错误", err)
-			return
+			continue
 		}
 
 		//这里判断小于0，等于0时当前连接获得最后一个
@@ -104,14 +104,14 @@ func main() {
 			err = redisClusterClient.Set(pidOverKey, 1, 0).Err()
 			if err != nil && err != redis.Nil {
 				common.ZapError("设置秒杀结束时错误", err)
-				return
+				continue
 			}
 
 			zap.L().Info("已无库存")
-			return
+			continue
 		}
 	}
-
+	
 	timeEnd := time.Now()
 	timeTotal := timeEnd.Sub(timeStart).Microseconds()
 	timeAvg := timeTotal/ int64(total)
