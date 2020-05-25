@@ -17,7 +17,7 @@ func init() {
 	} else {
 		os.Setenv("LOG_DIR", "/var/log/miaosha-demo")
 
-		out, err := exec.Command("/bin/bash", "-c", "ip addr show | grep 192.168.0.73").Output()
+		out, err := exec.Command("/bin/bash", "-c", "ip addr show | grep 172.21").Output()
 		if err == nil && len(out) > 0 {
 			//remote
 			os.Setenv("CONF_DIR", "/opt/code/miaosha-demo/conf")
