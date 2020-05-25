@@ -10,7 +10,7 @@ var hmacSampleSecret []byte = []byte("miaosha-demo-jwt-secret")
 
 //生成jwt
 func JwtSign(claims jwt.MapClaims) (string, error) {
-	claims["iss"] = "IXXGZxHhsKAx03020hdkfJZvsY4dBpy5"
+	claims["iss"] = "1dFjvu6WWars9bahttTbWuqFOEGIWB2G"
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(hmacSampleSecret)
