@@ -3,6 +3,7 @@ package common
 import (
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"io"
 	"sync"
 	"time"
@@ -84,7 +85,6 @@ func (pool *Pool) makeConn() (poolConn *PoolConn, err error) {
 func (pool *Pool) Get() (closer io.Closer, err error) {
 	pool.mu.RLock()
 	channel := pool.channel
-	config := pool.config
 	pool.mu.RUnlock()
 
 	if channel == nil {
@@ -103,40 +103,63 @@ func (pool *Pool) Get() (closer io.Closer, err error) {
 
 	poolConn := &PoolConn{}
 
-LOOP:
-	select {
-	case poolConn = <-channel:
-		fmt.Println("pool get")
-	default:
-		poolConn, err = pool.makeConn()
-		fmt.Println("pool get make")
+	//get conn from chan
+	for {
+		select {
+		case poolConn = <-channel:
+			if pool.Validate(poolConn) {
+				zap.L().Info("get conn from  chan succ")
+				break
+			} else {
+				pool.CloseConn(poolConn)
+				poolConn.conn = nil
 
-		if err != nil {
-			return nil, err
+				zap.L().Info("get conn from chan validate fail")
+				continue
+			}
+		//timeout
+		case <-time.After(time.Millisecond * 500):
+			zap.L().Info("get conn from chan timeout")
+			break
 		}
 	}
 
-	if poolConn == nil {
-		return nil, errors.New("poolConn is empty")
+	//new conn
+	if poolConn.conn == nil {
+		poolConn, err = pool.makeConn()
+		if err != nil {
+			zap.L().Info("pool new conn fail")
+			return nil, err
+		}
+
+		if !pool.Validate(poolConn) {
+			pool.CloseConn(poolConn)
+
+			zap.L().Info("pool new conn validate fail")
+			return nil, errors.New("pool conn validate fail")
+		}
 	}
 
-	fmt.Println(poolConn.idleStartTime, time.Now().Unix(), config.maxIdleSeconds)
+	return poolConn.conn, nil
+}
 
-	//poolConn expired, get or make one
+
+func (pool *Pool) Validate(poolConn *PoolConn) bool {
+	pool.mu.RLock()
+	config := pool.config
+	pool.mu.RUnlock()
+
+	//poolConn expired
 	if poolConn.idleStartTime > 0 && time.Now().Unix() - poolConn.idleStartTime >= config.maxIdleSeconds {
-		pool.CloseConn(poolConn)
-
-		goto LOOP
+		return false
 	}
 
 	//validate
 	if config.validateFunc != nil && !config.validateFunc(poolConn.conn) {
-		pool.CloseConn(poolConn)
-
-		goto LOOP
+		return false
 	}
 
-	return poolConn.conn, nil
+	return true
 }
 
 
