@@ -9,7 +9,6 @@ import (
 	"github.com/kataras/iris/v12/sessions"
 	"github.com/streadway/amqp"
 	"log"
-	"math/rand"
 	"miaosha-demo/common"
 	"miaosha-demo/services"
 	"strconv"
@@ -156,7 +155,7 @@ func (p *ProductController) GetOrder() {
 
 	//秒杀是否已结束
 	//热键分散
-	pidOverKey := fmt.Sprintf("%d_pid_over_%d", rand.Intn(99), pid)
+	pidOverKey := fmt.Sprintf("pid_over_%d", pid)
 	isOver, err := p.RedisClusterClient.Get(pidOverKey).Int()
 	if err != nil  && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "检查秒杀是否结束出错" + err.Error())
@@ -180,8 +179,7 @@ func (p *ProductController) GetOrder() {
 	}
 
 	//检查库存
-	//热键分散
-	numKey := fmt.Sprintf("%d_pid_num_%d", rand.Intn(99), pid)
+	numKey := fmt.Sprintf("pid_num_%d", pid)
 	num, err := p.RedisClusterClient.Decr(numKey).Result()
 	if err != nil && err != redis.Nil {
 		ReturnJsonFail(p.Ctx, "redis检查库存错误" + err.Error())
