@@ -104,26 +104,30 @@ func (pool *Pool) Get() (closer io.Closer, err error) {
 	poolConn := &PoolConn{}
 
 	//get conn from chan
+	breakNow := false
 	for {
 		select {
 		case poolConn = <-channel:
 			if pool.Validate(poolConn) {
 				zap.L().Info("get conn from  chan succ")
-				break
+				breakNow = true
 			} else {
 				pool.CloseConn(poolConn)
 				poolConn.conn = nil
 
 				zap.L().Info("get conn from chan validate fail")
-				continue
 			}
 		//timeout
 		case <-time.After(time.Millisecond * 500):
 			zap.L().Info("get conn from chan timeout")
+			breakNow = true
+		}
+
+		if breakNow {
 			break
 		}
 	}
-
+	
 	//new conn
 	if poolConn.conn == nil {
 		poolConn, err = pool.makeConn()
