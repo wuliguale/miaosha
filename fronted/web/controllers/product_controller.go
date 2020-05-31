@@ -56,7 +56,7 @@ func (p *ProductController) GetAll() mvc.View{
 		v["UrlDetail"] = "/product/one?id=" + pidStr
 
 		//秒杀接口使用单独的域名，不和商品页面使用同一个域名
-		v["UrlOrder"] = "http://49.233.17.189:8000/product/order?jwt=" + jwtStr
+		v["UrlOrder"] = "http://49.233.117.69:8000/product/order?jwt=" + jwtStr
 		productListMap[k] = v
 	}
 
